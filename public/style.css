@@ -108,6 +108,24 @@ h2 {
   cursor: pointer;
 }
 
+.use-location {
+  display: block;
+  width: 100%;
+  margin-bottom: 20px;
+  padding: 10px 16px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--card);
+  color: var(--fg);
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.use-location:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
 .spots {
   list-style: none;
   padding: 0;

@@ -137,6 +137,47 @@ function LangSwitcher({
 // of its datasets too. A linked attribution page (rather than inline text
 // on every page) satisfies both, as long as the link is present on every
 // page and the target page properly credits source + license.
+// "Use my location" - the only client-side JS on the site. The script body
+// itself is a static, developer-authored string (dangerouslySetInnerHTML is
+// safe here for the same reason as the attribution page's: nothing from a
+// request is interpolated into it). Per-request values (locale, translated
+// fallback name/error) travel via data-* attributes instead, which go
+// through normal JSX attribute escaping.
+function GeoLocationButton({ locale }: { locale: Locale }): JSX.Element {
+  return (
+    <>
+      <button
+        type="button"
+        id="use-location"
+        class="use-location"
+        data-locale={locale}
+        data-name={t(locale, "myLocation")}
+        data-error={t(locale, "locationFailed")}
+      >
+        {t(locale, "useMyLocation")}
+      </button>
+      <script
+        dangerouslySetInnerHTML={{
+          __html: `
+document.getElementById("use-location")?.addEventListener("click", function () {
+  var btn = this;
+  if (!navigator.geolocation) { alert(btn.dataset.error); return; }
+  btn.disabled = true;
+  navigator.geolocation.getCurrentPosition(
+    function (pos) {
+      var lat = pos.coords.latitude, lon = pos.coords.longitude;
+      window.location.href = "/" + btn.dataset.locale + "/conditions?lat=" + lat + "&lon=" + lon + "&name=" + encodeURIComponent(btn.dataset.name);
+    },
+    function () { btn.disabled = false; alert(btn.dataset.error); }
+  );
+});
+`,
+        }}
+      />
+    </>
+  );
+}
+
 function Footer({ locale }: { locale: Locale }): JSX.Element {
   return (
     <footer class="site-footer">
@@ -247,6 +288,7 @@ export function renderLandingPage({
           <input type="text" name="q" placeholder={t(locale, "searchPlaceholder")} required />
           <button type="submit">{t(locale, "searchButton")}</button>
         </form>
+        <GeoLocationButton locale={locale} />
         <h2>{t(locale, "popularSpots")}</h2>
         <ul class="spots">
           {spots.map((s) => (
