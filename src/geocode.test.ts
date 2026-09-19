@@ -23,6 +23,19 @@ describe("searchLocation", () => {
     assert.deepEqual(results, [{ name: "Utrecht", type: "woonplaats", lon: 5.1214, lat: 52.0907 }]);
   });
 
+  test("excludes gemeente and provincie via fq - broad regions that otherwise outrank the actual place", async (t) => {
+    const calls = mockFetch(t, [
+      {
+        match: (url) => url.includes("locatieserver/search/v3_1/free"),
+        respond: () => ({ status: 200, json: { response: { docs: [] } } }),
+      },
+    ]);
+
+    await searchLocation("Amsterdam");
+    const url = new URL(calls[0]!.url);
+    assert.deepEqual(url.searchParams.getAll("fq"), ["-type:gemeente", "-type:provincie"]);
+  });
+
   test("skips a doc with no parseable centroide_ll", async (t) => {
     mockFetch(t, [
       {

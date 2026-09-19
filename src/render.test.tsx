@@ -5,7 +5,7 @@
 // on the attribution page) still doing what it's supposed to.
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import { renderSpotPage, renderLandingPage, renderSearchPage, renderAttributionPage } from "./render";
+import { renderSpotPage, renderLandingPage, renderAttributionPage } from "./render";
 import type { ScoredHour } from "./scoring";
 
 const XSS = '<script>alert(1)</script>';
@@ -19,28 +19,6 @@ const baseArgs = { locale: "en" as const, currentPath: "/", search: "" };
 describe("XSS-shaped input is escaped, not executed", () => {
   test("a spot's location name", () => {
     const html = renderSpotPage({ ...baseArgs, locationName: XSS, scoredHours: [] });
-    assert.ok(!html.includes("<script>alert(1)</script>"));
-    assert.ok(html.includes("&lt;script>"));
-  });
-
-  test("a curated spot's name on the landing page", () => {
-    const html = renderLandingPage({ ...baseArgs, spots: [{ slug: "x", name: XSS, lat: 0, lon: 0 }] });
-    assert.ok(!html.includes("<script>alert(1)</script>"));
-    assert.ok(html.includes("&lt;script>"));
-  });
-
-  test("a search query", () => {
-    const html = renderSearchPage({ ...baseArgs, query: XSS, results: [] });
-    assert.ok(!html.includes("<script>alert(1)</script>"));
-    assert.ok(html.includes("&lt;script>"));
-  });
-
-  test("a PDOK search result's name", () => {
-    const html = renderSearchPage({
-      ...baseArgs,
-      query: "irrelevant",
-      results: [{ name: XSS, type: "woonplaats", lat: 52, lon: 5 }],
-    });
     assert.ok(!html.includes("<script>alert(1)</script>"));
     assert.ok(html.includes("&lt;script>"));
   });
@@ -98,19 +76,39 @@ describe("renderAttributionPage", () => {
 
 describe("renderLandingPage - use my location button", () => {
   test("carries the locale and translated strings as data attributes, per locale", () => {
-    const en = renderLandingPage({ ...baseArgs, spots: [] });
+    const en = renderLandingPage(baseArgs);
     assert.ok(en.includes('id="use-location"'));
     assert.ok(en.includes('data-locale="en"'));
     assert.ok(en.includes("Use my location"));
 
-    const nl = renderLandingPage({ locale: "nl", currentPath: "/", search: "", spots: [] });
+    const nl = renderLandingPage({ locale: "nl", currentPath: "/", search: "" });
     assert.ok(nl.includes('data-locale="nl"'));
     assert.ok(nl.includes("Gebruik mijn locatie"));
   });
 
   test("the geolocation script is present and untouched by escaping", () => {
-    const html = renderLandingPage({ ...baseArgs, spots: [] });
+    const html = renderLandingPage(baseArgs);
     assert.ok(html.includes("navigator.geolocation"));
     assert.ok(html.includes("getCurrentPosition"));
+  });
+});
+
+describe("renderLandingPage - location picker map", () => {
+  test("includes the map container, Leaflet, and both API endpoints", () => {
+    const html = renderLandingPage(baseArgs);
+    assert.ok(html.includes('id="picker-map"'));
+    assert.ok(html.includes('id="picker-panel"'));
+    assert.ok(html.includes("leaflet"));
+    assert.ok(html.includes("/api/search"));
+    assert.ok(html.includes("/api/reverse"));
+  });
+
+  test("carries translated no-matches/search-failed strings as data attributes, per locale", () => {
+    const en = renderLandingPage(baseArgs);
+    assert.ok(en.includes('data-no-matches="No matches found."'));
+    assert.ok(en.includes('data-search-failed="Search failed - try again."'));
+
+    const de = renderLandingPage({ locale: "de", currentPath: "/", search: "" });
+    assert.ok(de.includes('data-no-matches="Keine Treffer gefunden."'));
   });
 });
