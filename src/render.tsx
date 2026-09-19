@@ -253,6 +253,21 @@ function LocationPicker({ locale }: { locale: Locale }): JSX.Element {
   var input = document.getElementById("picker-search-input");
   var resultsEl = document.getElementById("picker-results");
 
+  function goToResult(r) {
+    map.flyTo([r.lat, r.lon], 15);
+    selectPoint(r.lat, r.lon, r.name);
+    mapEl.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+
+  function showMessage(text) {
+    resultsEl.innerHTML = "";
+    var p = document.createElement("p");
+    p.className = "empty";
+    p.textContent = text || "";
+    resultsEl.appendChild(p);
+    resultsEl.hidden = false;
+  }
+
   form.addEventListener("submit", function (e) {
     e.preventDefault();
     var q = input.value.trim();
@@ -260,37 +275,27 @@ function LocationPicker({ locale }: { locale: Locale }): JSX.Element {
     fetch("/api/search?q=" + encodeURIComponent(q))
       .then(function (r) { return r.json(); })
       .then(function (results) {
+        if (!results.length) { showMessage(mapEl.dataset.noMatches); return; }
+
+        // Whatever type the top match is (city, address, POI - no further
+        // filtering here), go straight there - the list below is only for
+        // when that guess isn't the one you meant.
+        goToResult(results[0]);
+
         resultsEl.innerHTML = "";
-        if (!results.length) {
-          resultsEl.hidden = false;
-          var p = document.createElement("p");
-          p.className = "empty";
-          p.textContent = mapEl.dataset.noMatches || "";
-          resultsEl.appendChild(p);
-          return;
-        }
         results.forEach(function (r) {
           var btn = document.createElement("button");
           btn.type = "button";
           btn.textContent = r.name;
           btn.addEventListener("click", function () {
-            map.flyTo([r.lat, r.lon], 15);
-            selectPoint(r.lat, r.lon, r.name);
+            goToResult(r);
             resultsEl.hidden = true;
-            mapEl.scrollIntoView({ behavior: "smooth", block: "center" });
           });
           resultsEl.appendChild(btn);
         });
         resultsEl.hidden = false;
       })
-      .catch(function () {
-        resultsEl.innerHTML = "";
-        var p = document.createElement("p");
-        p.className = "empty";
-        p.textContent = mapEl.dataset.searchFailed || "";
-        resultsEl.appendChild(p);
-        resultsEl.hidden = false;
-      });
+      .catch(function () { showMessage(mapEl.dataset.searchFailed); });
   });
 })();
 `,

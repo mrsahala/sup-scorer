@@ -25,6 +25,11 @@ export async function searchLocation(query: string, { limit = 5 }: { limit?: num
   url.searchParams.set("q", query);
   url.searchParams.set("fl", "weergavenaam,centroide_ll,type");
   url.searchParams.set("rows", String(limit));
+  // gemeente/provincie are broad administrative regions, not places someone
+  // means by a plain name search - PDOK otherwise ranks "Gemeente Amsterdam"
+  // above the city "Amsterdam" itself for a query of just "Amsterdam".
+  url.searchParams.append("fq", "-type:gemeente");
+  url.searchParams.append("fq", "-type:provincie");
 
   const resp = await fetch(url);
   if (!resp.ok) {
