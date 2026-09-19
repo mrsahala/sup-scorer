@@ -132,17 +132,13 @@ function LangSwitcher({
   );
 }
 
-// Open-Meteo's free API is CC BY 4.0 - attribution is a license term, not
-// just courtesy. PDOK requires "naamsvermelding" (name attribution) on most
-// of its datasets too. A linked attribution page (rather than inline text
-// on every page) satisfies both, as long as the link is present on every
-// page and the target page properly credits source + license.
 // "Use my location" - the only client-side JS on the site. The script body
 // itself is a static, developer-authored string (dangerouslySetInnerHTML is
 // safe here for the same reason as the attribution page's: nothing from a
-// request is interpolated into it). Per-request values (locale, translated
-// fallback name/error) travel via data-* attributes instead, which go
-// through normal JSX attribute escaping.
+// request is interpolated into it). The per-request value (locale) travels
+// via a data-* attribute instead, which goes through normal JSX escaping.
+// The display name isn't handled here at all - the server reverse-geocodes
+// it from lat/lon once redirected (see index.ts's /conditions handler).
 function GeoLocationButton({ locale }: { locale: Locale }): JSX.Element {
   return (
     <>
@@ -151,7 +147,6 @@ function GeoLocationButton({ locale }: { locale: Locale }): JSX.Element {
         id="use-location"
         class="use-location"
         data-locale={locale}
-        data-name={t(locale, "myLocation")}
         data-error={t(locale, "locationFailed")}
       >
         {t(locale, "useMyLocation")}
@@ -166,7 +161,9 @@ document.getElementById("use-location")?.addEventListener("click", function () {
   navigator.geolocation.getCurrentPosition(
     function (pos) {
       var lat = pos.coords.latitude, lon = pos.coords.longitude;
-      window.location.href = "/" + btn.dataset.locale + "/conditions?lat=" + lat + "&lon=" + lon + "&name=" + encodeURIComponent(btn.dataset.name);
+      // No "name" param here on purpose - the server reverse-geocodes a
+      // label from lat/lon (see index.ts's /conditions handler).
+      window.location.href = "/" + btn.dataset.locale + "/conditions?lat=" + lat + "&lon=" + lon;
     },
     function () { btn.disabled = false; alert(btn.dataset.error); }
   );
@@ -178,6 +175,11 @@ document.getElementById("use-location")?.addEventListener("click", function () {
   );
 }
 
+// Open-Meteo's free API is CC BY 4.0 - attribution is a license term, not
+// just courtesy. PDOK requires "naamsvermelding" (name attribution) on most
+// of its datasets too. A linked attribution page (rather than inline text
+// on every page) satisfies both, as long as the link is present on every
+// page and the target page properly credits source + license.
 function Footer({ locale }: { locale: Locale }): JSX.Element {
   return (
     <footer class="site-footer">

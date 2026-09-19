@@ -101,12 +101,11 @@ describe("renderLandingPage - use my location button", () => {
     const en = renderLandingPage({ ...baseArgs, spots: [] });
     assert.ok(en.includes('id="use-location"'));
     assert.ok(en.includes('data-locale="en"'));
-    assert.ok(en.includes('data-name="My location"'));
     assert.ok(en.includes("Use my location"));
 
     const nl = renderLandingPage({ locale: "nl", currentPath: "/", search: "", spots: [] });
     assert.ok(nl.includes('data-locale="nl"'));
-    assert.ok(nl.includes('data-name="Mijn locatie"'));
+    assert.ok(nl.includes("Gebruik mijn locatie"));
   });
 
   test("the geolocation script is present and untouched by escaping", () => {

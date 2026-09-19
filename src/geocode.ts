@@ -1,11 +1,9 @@
-// Free-text NL location search (ticket 2.3), backing the "or search any
-// location" escape hatch from the design doc's Location UX section.
-//
-// PDOK's Locatieserver - Dutch government geocoding, free/keyless - chosen
-// over Nominatim's shared demo server: it's built specifically for NL
-// addresses/place names and doesn't carry Nominatim's strict shared-server
-// rate limits.
+// Forward (free-text search) and reverse (lat/lon -> place name) NL
+// geocoding via PDOK's Locatieserver - Dutch government, free/keyless,
+// chosen over Nominatim's shared demo server for NL-specific coverage and
+// looser rate limits.
 const ENDPOINT = "https://api.pdok.nl/bzk/locatieserver/search/v3_1/free";
+const REVERSE_ENDPOINT = "https://api.pdok.nl/bzk/locatieserver/search/v3_1/reverse";
 
 // One searchLocation match: a display name, PDOK's place-type ("gemeente",
 // "woonplaats", etc. - shown nowhere in the UI today, kept for later use),
@@ -45,4 +43,37 @@ export async function searchLocation(query: string, { limit = 5 }: { limit?: num
     results.push({ name: doc.weergavenaam, type: doc.type, lon: Number(match[1]), lat: Number(match[2]) });
   }
   return results;
+}
+
+interface PdokReverseResponse {
+  response?: {
+    docs?: { weergavenaam: string }[];
+  };
+}
+
+// Best-effort "what's this coordinate near" lookup, backing the GPS "use my
+// location" button's display name. Restricted to type=woonplaats (town/city
+// level) rather than an exact address - PDOK's woonplaats weergavenaam
+// repeats the name across place/municipality/province ("Utrecht, Utrecht,
+// Utrecht"; "Zandvoort, Zandvoort, Noord-Holland"), so only the first
+// segment is kept. Returns null (never throws) on no match or a network
+// failure - this is a nice-to-have label, not worth failing the whole
+// conditions page over.
+export async function reverseGeocode(lat: number, lon: number): Promise<string | null> {
+  const url = new URL(REVERSE_ENDPOINT);
+  url.searchParams.set("lat", String(lat));
+  url.searchParams.set("lon", String(lon));
+  url.searchParams.set("type", "woonplaats");
+  url.searchParams.set("fl", "weergavenaam");
+  url.searchParams.set("rows", "1");
+
+  try {
+    const resp = await fetch(url);
+    if (!resp.ok) return null;
+    const data = (await resp.json()) as PdokReverseResponse;
+    const name = data.response?.docs?.[0]?.weergavenaam;
+    return name ? name.split(",")[0]!.trim() : null;
+  } catch {
+    return null;
+  }
 }
