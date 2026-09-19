@@ -51,19 +51,11 @@ interface PdokReverseResponse {
   };
 }
 
-// Best-effort "what's this coordinate near" lookup, backing the GPS "use my
-// location" button's display name. Restricted to type=woonplaats (town/city
-// level) rather than an exact address - PDOK's woonplaats weergavenaam
-// repeats the name across place/municipality/province ("Utrecht, Utrecht,
-// Utrecht"; "Zandvoort, Zandvoort, Noord-Holland"), so only the first
-// segment is kept. Returns null (never throws) on no match or a network
-// failure - this is a nice-to-have label, not worth failing the whole
-// conditions page over.
-export async function reverseGeocode(lat: number, lon: number): Promise<string | null> {
+async function reverseGeocodeByType(lat: number, lon: number, type: string): Promise<string | null> {
   const url = new URL(REVERSE_ENDPOINT);
   url.searchParams.set("lat", String(lat));
   url.searchParams.set("lon", String(lon));
-  url.searchParams.set("type", "woonplaats");
+  url.searchParams.set("type", type);
   url.searchParams.set("fl", "weergavenaam");
   url.searchParams.set("rows", "1");
 
@@ -72,8 +64,24 @@ export async function reverseGeocode(lat: number, lon: number): Promise<string |
     if (!resp.ok) return null;
     const data = (await resp.json()) as PdokReverseResponse;
     const name = data.response?.docs?.[0]?.weergavenaam;
+    // woonplaats' weergavenaam repeats the name across place/municipality/
+    // province ("Utrecht, Utrecht, Utrecht") - only buurt's format doesn't
+    // have a comma to begin with, so this is a no-op there.
     return name ? name.split(",")[0]!.trim() : null;
   } catch {
     return null;
   }
+}
+
+// Best-effort "what's this coordinate near" lookup, backing the GPS "use my
+// location" button's display name. Tries buurt (neighborhood) level first -
+// "Diamantbuurt Amsterdam" reads better than just "Amsterdam" - falling
+// back to woonplaats (town/city) for a spot with no neighborhood
+// classification (verified buurt still resolves fine right up to the
+// water's edge for typical SUP spots, but a fallback costs nothing and
+// covers anything more remote). Returns null (never throws) if both fail -
+// this is a nice-to-have label, not worth failing the whole conditions
+// page over.
+export async function reverseGeocode(lat: number, lon: number): Promise<string | null> {
+  return (await reverseGeocodeByType(lat, lon, "buurt")) ?? (await reverseGeocodeByType(lat, lon, "woonplaats"));
 }

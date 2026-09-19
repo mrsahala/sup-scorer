@@ -50,10 +50,30 @@ describe("searchLocation", () => {
 });
 
 describe("reverseGeocode", () => {
-  test("keeps only the first comma segment of weergavenaam", async (t) => {
-    mockFetch(t, [
+  test("uses the buurt (neighborhood) result when one's found", async (t) => {
+    const calls = mockFetch(t, [
       {
         match: (url) => url.includes("locatieserver/search/v3_1/reverse"),
+        respond: () => ({ status: 200, json: { response: { docs: [{ weergavenaam: "Diamantbuurt Amsterdam" }] } } }),
+      },
+    ]);
+
+    assert.equal(await reverseGeocode(52.35, 4.9075), "Diamantbuurt Amsterdam");
+    assert.equal(calls.length, 1, "should not fall back to woonplaats when buurt already matched");
+    const url = new URL(calls[0]!.url);
+    assert.equal(url.searchParams.get("type"), "buurt");
+    assert.equal(url.searchParams.get("lat"), "52.35");
+    assert.equal(url.searchParams.get("lon"), "4.9075");
+  });
+
+  test("keeps only the first comma segment of weergavenaam (woonplaats' repeated-name format)", async (t) => {
+    mockFetch(t, [
+      {
+        match: (url) => url.includes("type=buurt"),
+        respond: () => ({ status: 200, json: { response: { docs: [] } } }),
+      },
+      {
+        match: (url) => url.includes("type=woonplaats"),
         respond: () => ({
           status: 200,
           json: { response: { docs: [{ weergavenaam: "Zandvoort, Zandvoort, Noord-Holland" }] } },
@@ -64,22 +84,23 @@ describe("reverseGeocode", () => {
     assert.equal(await reverseGeocode(52.373, 4.533), "Zandvoort");
   });
 
-  test("requests type=woonplaats specifically", async (t) => {
+  test("falls back to woonplaats when buurt has no match", async (t) => {
     const calls = mockFetch(t, [
       {
-        match: (url) => url.includes("locatieserver/search/v3_1/reverse"),
+        match: (url) => url.includes("type=buurt"),
         respond: () => ({ status: 200, json: { response: { docs: [] } } }),
+      },
+      {
+        match: (url) => url.includes("type=woonplaats"),
+        respond: () => ({ status: 200, json: { response: { docs: [{ weergavenaam: "Utrecht" }] } } }),
       },
     ]);
 
-    await reverseGeocode(52.09, 5.12);
-    const url = new URL(calls[0]!.url);
-    assert.equal(url.searchParams.get("type"), "woonplaats");
-    assert.equal(url.searchParams.get("lat"), "52.09");
-    assert.equal(url.searchParams.get("lon"), "5.12");
+    assert.equal(await reverseGeocode(52.09, 5.12), "Utrecht");
+    assert.equal(calls.length, 2);
   });
 
-  test("returns null (not a throw) when there are no matching docs", async (t) => {
+  test("returns null (not a throw) when neither tier has a matching doc", async (t) => {
     mockFetch(t, [
       {
         match: (url) => url.includes("locatieserver/search/v3_1/reverse"),
