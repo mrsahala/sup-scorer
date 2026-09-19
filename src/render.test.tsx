@@ -95,3 +95,22 @@ describe("renderAttributionPage", () => {
     assert.ok(!html.includes("&lt;a href"));
   });
 });
+
+describe("renderLandingPage - use my location button", () => {
+  test("carries the locale and translated strings as data attributes, per locale", () => {
+    const en = renderLandingPage({ ...baseArgs, spots: [] });
+    assert.ok(en.includes('id="use-location"'));
+    assert.ok(en.includes('data-locale="en"'));
+    assert.ok(en.includes("Use my location"));
+
+    const nl = renderLandingPage({ locale: "nl", currentPath: "/", search: "", spots: [] });
+    assert.ok(nl.includes('data-locale="nl"'));
+    assert.ok(nl.includes("Gebruik mijn locatie"));
+  });
+
+  test("the geolocation script is present and untouched by escaping", () => {
+    const html = renderLandingPage({ ...baseArgs, spots: [] });
+    assert.ok(html.includes("navigator.geolocation"));
+    assert.ok(html.includes("getCurrentPosition"));
+  });
+});

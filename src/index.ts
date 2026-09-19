@@ -8,7 +8,7 @@ import { scoreHour, type ScoredHour } from "./scoring";
 import { LOCATION } from "./config";
 import { renderSpotPage, renderLandingPage, renderSearchPage, renderAttributionPage } from "./render";
 import { SPOTS, findSpot } from "./spots";
-import { searchLocation } from "./geocode";
+import { searchLocation, reverseGeocode } from "./geocode";
 import { t, parseLocalizedPath, DEFAULT_LOCALE, type Locale } from "./i18n";
 
 // The Worker's bindings, matching wrangler.jsonc's `assets` block. ASSETS
@@ -45,11 +45,19 @@ async function handleAppRoute(locale: Locale, path: string, url: URL): Promise<R
   if (path === "/conditions") {
     const lat = Number(url.searchParams.get("lat"));
     const lon = Number(url.searchParams.get("lon"));
-    const name = url.searchParams.get("name") || `${lat}, ${lon}`;
     if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
       return new Response(t(locale, "invalidLatLon"), { status: 400 });
     }
-    const scoredHours = await computeScoredHours({ lat, lon });
+    // A "name" is only ever missing when the GPS button linked here directly
+    // with raw coordinates (search results always pass one, already
+    // resolved by PDOK's forward lookup) - reverse-geocode a label for that
+    // case, alongside the forecast fetch rather than after it.
+    const paramName = url.searchParams.get("name");
+    const [scoredHours, resolvedName] = await Promise.all([
+      computeScoredHours({ lat, lon }),
+      paramName ? Promise.resolve(paramName) : reverseGeocode(lat, lon),
+    ]);
+    const name = resolvedName || t(locale, "myLocation");
     return html(renderSpotPage({ locale, locationName: name, scoredHours, currentPath, search }));
   }
 

@@ -132,6 +132,49 @@ function LangSwitcher({
   );
 }
 
+// "Use my location" - the only client-side JS on the site. The script body
+// itself is a static, developer-authored string (dangerouslySetInnerHTML is
+// safe here for the same reason as the attribution page's: nothing from a
+// request is interpolated into it). The per-request value (locale) travels
+// via a data-* attribute instead, which goes through normal JSX escaping.
+// The display name isn't handled here at all - the server reverse-geocodes
+// it from lat/lon once redirected (see index.ts's /conditions handler).
+function GeoLocationButton({ locale }: { locale: Locale }): JSX.Element {
+  return (
+    <>
+      <button
+        type="button"
+        id="use-location"
+        class="use-location"
+        data-locale={locale}
+        data-error={t(locale, "locationFailed")}
+      >
+        {t(locale, "useMyLocation")}
+      </button>
+      <script
+        dangerouslySetInnerHTML={{
+          __html: `
+document.getElementById("use-location")?.addEventListener("click", function () {
+  var btn = this;
+  if (!navigator.geolocation) { alert(btn.dataset.error); return; }
+  btn.disabled = true;
+  navigator.geolocation.getCurrentPosition(
+    function (pos) {
+      var lat = pos.coords.latitude, lon = pos.coords.longitude;
+      // No "name" param here on purpose - the server reverse-geocodes a
+      // label from lat/lon (see index.ts's /conditions handler).
+      window.location.href = "/" + btn.dataset.locale + "/conditions?lat=" + lat + "&lon=" + lon;
+    },
+    function () { btn.disabled = false; alert(btn.dataset.error); }
+  );
+});
+`,
+        }}
+      />
+    </>
+  );
+}
+
 // Open-Meteo's free API is CC BY 4.0 - attribution is a license term, not
 // just courtesy. PDOK requires "naamsvermelding" (name attribution) on most
 // of its datasets too. A linked attribution page (rather than inline text
@@ -247,6 +290,7 @@ export function renderLandingPage({
           <input type="text" name="q" placeholder={t(locale, "searchPlaceholder")} required />
           <button type="submit">{t(locale, "searchButton")}</button>
         </form>
+        <GeoLocationButton locale={locale} />
         <h2>{t(locale, "popularSpots")}</h2>
         <ul class="spots">
           {spots.map((s) => (
