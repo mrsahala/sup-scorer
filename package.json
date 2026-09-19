@@ -1,0 +1,27 @@
+{
+  "name": "sup-scorer",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "test": "node --import tsx --test src/**/*.test.ts src/**/*.test.tsx",
+    "typecheck": "tsc --noEmit",
+    "cf-typegen": "wrangler types"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "preact": "^10.25.4",
+    "preact-render-to-string": "^6.5.13"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260918.1",
+    "@types/node": "^22.10.5",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3",
+    "wrangler": "^4.126.0"
+  }
+}
