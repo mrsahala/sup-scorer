@@ -1,5 +1,5 @@
 // Fetches an hourly wind/temp forecast plus daily sunrise/sunset from
-// Open-Meteo - free, keyless, no rate-limit auth needed.
+// Open-Meteo.
 //
 // Deliberately its own copy (not shared) - same reasoning sup-sync and
 // remarkable-hack use for each other: this repo is meant to stand alone.
@@ -17,28 +17,33 @@ export interface HourRow {
   // Meteorological convention: the direction the wind is blowing FROM
   // (0 = N, 90 = E, ...), not the direction it's heading towards.
   windDirDeg: number;
+  // Open-Meteo's WMO weather code (0 = clear sky, 61 = light rain, etc.) -
+  // https://open-meteo.com/en/docs#weathervariables lists the full table.
+  // Not currently shown anywhere in the UI; fetched for future use.
   weatherCode: number;
+  // Precomputed once here (against the day's sunrise/sunset below) so
+  // every downstream consumer - scoring.ts's qualifies check, render.tsx's
+  // groupByDate filter - just reads a boolean instead of each re-deriving
+  // it from a sunrise/sunset lookup.
   isDaylight: boolean;
 }
 
-// One day's sunrise/sunset instants, used to tag each HourRow with
-// isDaylight without re-deriving it per hour.
-export interface DaylightWindow {
+// One day's sunrise/sunset instants - only used internally, to compute
+// each HourRow's isDaylight; not part of this module's public return value.
+interface DaylightWindow {
   sunrise: Date;
   sunset: Date;
 }
 
-// fetchForecast's return value: the mapped hourly rows, plus the raw
-// sunrise/sunset lookup they were derived from (exposed in case a caller
-// needs the daylight window itself, not just the isDaylight flag).
+// fetchForecast's return value.
 export interface ForecastResult {
   hours: HourRow[];
-  daylightByDate: Map<string, DaylightWindow>;
 }
 
 // fetchForecast's params - all optional, each defaulting to config.ts's
-// LOCATION/LOOKAHEAD_DAYS so a bare `fetchForecast()` fetches the default
-// spot's forecast.
+// LOCATION/LOOKAHEAD_DAYS. In practice the one real caller (index.ts)
+// always overrides lat/lon and never timezone/days (all of NL is one
+// timezone); the defaults mainly let tests call fetchForecast() bare.
 interface FetchForecastOptions {
   lat?: number;
   lon?: number;
@@ -47,7 +52,8 @@ interface FetchForecastOptions {
 }
 
 // The shape of Open-Meteo's JSON response (only the fields this project
-// actually requests/uses - Open-Meteo's real response has more).
+// actually requests/uses - see https://open-meteo.com/en/docs for the
+// full public response shape).
 interface OpenMeteoResponse {
   hourly: {
     time: string[];
@@ -62,6 +68,19 @@ interface OpenMeteoResponse {
     sunrise: string[];
     sunset: string[];
   };
+}
+
+// Thrown by fetchForecast on a non-2xx response. status/body are real
+// properties (not just embedded in the message string) so a caller can
+// branch on them programmatically instead of parsing message text.
+export class OpenMeteoError extends Error {
+  constructor(
+    public readonly status: number,
+    public readonly body: string
+  ) {
+    super(`Open-Meteo fetch failed: ${status} ${body}`);
+    this.name = "OpenMeteoError";
+  }
 }
 
 // Fetches and maps one location's hourly forecast.
@@ -83,7 +102,7 @@ export async function fetchForecast({
 
   const resp = await fetch(url);
   if (!resp.ok) {
-    throw new Error(`Open-Meteo fetch failed: ${resp.status} ${await resp.text()}`);
+    throw new OpenMeteoError(resp.status, await resp.text());
   }
   const data = (await resp.json()) as OpenMeteoResponse;
 
@@ -116,5 +135,5 @@ export async function fetchForecast({
     };
   });
 
-  return { hours, daylightByDate };
+  return { hours };
 }

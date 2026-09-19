@@ -52,17 +52,9 @@ export const WIND_TIERS: WindTierConfig[] = [
 // is worth a session.
 export const WORST_QUALIFYING_TIER: Tier = "marginal";
 
-// Gust adjustment, applied per hour on top of the sustained-wind tier above
-// (see scoring.ts's applyGustAdjustment - this mirrors that logic 1:1).
-// Gust can only ever push the tier worse, never better than what sustained
-// wind alone earned:
-//   - gust > GUST_FORCE_AVOID_KMH            -> forced to avoid
-//   - gust > GUST_FORCE_POOR_KMH             -> forced to at least "poor"
-//   - delta = gust - sustained; ratio = gust / max(sustained, 1)
-//   - delta > GUST_DOWNGRADE_2_DELTA_KMH, or (ratio >= GUST_DOWNGRADE_RATIO
-//     and gust >= GUST_DOWNGRADE_2_RATIO_MIN_KMH)  -> downgrade 2 tiers
-//   - delta > GUST_DOWNGRADE_1_DELTA_KMH, or (ratio >= GUST_DOWNGRADE_RATIO
-//     and gust >= GUST_DOWNGRADE_1_RATIO_MIN_KMH)  -> downgrade 1 tier
+// Gust adjustment inputs - see scoring.ts's applyGustAdjustment for how
+// these combine into a tier downgrade (that's the canonical explanation
+// of how scoring works; this file just documents each knob).
 
 // Gust above this overrides everything else and forces "avoid", regardless
 // of how calm the sustained wind is.

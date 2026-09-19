@@ -44,9 +44,17 @@ function baseTierFromWind(windKmh: number): Tier {
   return match ? match.name : "avoid";
 }
 
-// Mirrors config.ts's GUST_* comment 1:1 - see that file for the rule
-// table. Gust can only ever make the tier worse (or leave it unchanged),
-// never better than what sustained wind alone earned.
+// Applied per hour on top of the sustained-wind tier from baseTierFromWind.
+// Gust can only ever make the tier worse (or leave it unchanged), never
+// better than what sustained wind alone earned:
+//   - gust > GUST_FORCE_AVOID_KMH            -> forced to avoid
+//   - gust > GUST_FORCE_POOR_KMH             -> forced to at least "poor"
+//   - delta = gust - sustained; ratio = gust / max(sustained, 1)
+//   - delta > GUST_DOWNGRADE_2_DELTA_KMH, or (ratio >= GUST_DOWNGRADE_RATIO
+//     and gust >= GUST_DOWNGRADE_2_RATIO_MIN_KMH)  -> downgrade 2 tiers
+//   - delta > GUST_DOWNGRADE_1_DELTA_KMH, or (ratio >= GUST_DOWNGRADE_RATIO
+//     and gust >= GUST_DOWNGRADE_1_RATIO_MIN_KMH)  -> downgrade 1 tier
+// (each *_KMH/*_RATIO constant is tuned in config.ts)
 function applyGustAdjustment(
   baseTier: Tier,
   windKmh: number,

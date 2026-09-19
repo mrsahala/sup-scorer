@@ -1,7 +1,7 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import { mockFetch } from "../testSupport";
-import { fetchForecast } from "./weather";
+import { fetchForecast, OpenMeteoError } from "./weather";
 
 function fixture() {
   return {
@@ -87,7 +87,7 @@ describe("fetchForecast", () => {
     assert.ok(Number(url.searchParams.get("forecast_days")) > 0);
   });
 
-  test("throws with status and body text when the request fails", async (t) => {
+  test("throws an OpenMeteoError with status/body as real properties, not just in the message", async (t) => {
     mockFetch(t, [
       {
         match: (url) => url.includes("api.open-meteo.com"),
@@ -95,7 +95,13 @@ describe("fetchForecast", () => {
       },
     ]);
 
-    await assert.rejects(() => fetchForecast(), /Open-Meteo fetch failed: 500/);
+    await assert.rejects(() => fetchForecast(), (err: unknown) => {
+      assert.ok(err instanceof OpenMeteoError);
+      assert.equal(err.status, 500);
+      assert.equal(err.body, "server exploded");
+      assert.match(err.message, /Open-Meteo fetch failed: 500/);
+      return true;
+    });
   });
 
   test("an hour with no matching daily entry is not daylight", async (t) => {
