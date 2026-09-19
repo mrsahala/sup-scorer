@@ -1,13 +1,14 @@
 // Public multi-location SUP conditions site. URL scheme is always-prefix
 // (/en/..., /nl/..., /de/...) - see i18n.ts for why. "/<locale>/" is the
-// landing page (curated spots + search), "/<locale>/spots/:slug" and
-// "/<locale>/conditions?lat=&lon=" both render the same conditions view for
-// a curated vs. searched location.
+// landing page (search-then-pinpoint map, see render.tsx's LocationPicker)
+// and "/<locale>/conditions?lat=&lon=" renders the conditions view for
+// whatever point was picked. "/api/search" and "/api/reverse" are plain
+// JSON endpoints the picker's client-side script calls - not locale-
+// prefixed, since they're fetch() targets, not pages anyone bookmarks.
 import { fetchForecast } from "./weather";
 import { scoreHour, type ScoredHour } from "./scoring";
 import { LOCATION } from "./config";
-import { renderSpotPage, renderLandingPage, renderSearchPage, renderAttributionPage } from "./render";
-import { SPOTS, findSpot } from "./spots";
+import { renderSpotPage, renderLandingPage, renderAttributionPage } from "./render";
 import { searchLocation, reverseGeocode } from "./geocode";
 import { t, parseLocalizedPath, DEFAULT_LOCALE, type Locale } from "./i18n";
 
@@ -31,15 +32,7 @@ async function handleAppRoute(locale: Locale, path: string, url: URL): Promise<R
   const search = url.search;
 
   if (path === "/") {
-    return html(renderLandingPage({ locale, spots: SPOTS, currentPath, search }));
-  }
-
-  const spotMatch = path.match(/^\/spots\/([a-z0-9-]+)$/);
-  if (spotMatch) {
-    const spot = findSpot(spotMatch[1]!);
-    if (!spot) return new Response(t(locale, "spotNotFound"), { status: 404 });
-    const scoredHours = await computeScoredHours(spot);
-    return html(renderSpotPage({ locale, locationName: spot.name, scoredHours, currentPath, search }));
+    return html(renderLandingPage({ locale, currentPath, search }));
   }
 
   if (path === "/conditions") {
@@ -65,19 +58,28 @@ async function handleAppRoute(locale: Locale, path: string, url: URL): Promise<R
     return html(renderAttributionPage({ locale, currentPath, search }));
   }
 
-  if (path === "/search") {
+  return new Response("Not found", { status: 404 });
+}
+
+// Plain JSON, no HTML - what the landing page's map picker script fetches.
+async function handleApiRoute(path: string, url: URL): Promise<Response> {
+  if (path === "/api/search") {
     const query = (url.searchParams.get("q") || "").trim();
-    if (!query) {
-      return html(renderSearchPage({ locale, query, results: [], currentPath, search }));
-    }
+    if (!query) return Response.json([]);
     try {
-      const results = await searchLocation(query);
-      return html(renderSearchPage({ locale, query, results, currentPath, search }));
+      return Response.json(await searchLocation(query));
     } catch {
-      return html(
-        renderSearchPage({ locale, query, results: [], error: t(locale, "searchFailed"), currentPath, search })
-      );
+      return Response.json([], { status: 502 });
     }
+  }
+
+  if (path === "/api/reverse") {
+    const lat = Number(url.searchParams.get("lat"));
+    const lon = Number(url.searchParams.get("lon"));
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+      return Response.json({ name: null }, { status: 400 });
+    }
+    return Response.json({ name: await reverseGeocode(lat, lon) });
   }
 
   return new Response("Not found", { status: 404 });
@@ -88,6 +90,10 @@ export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
     const path = url.pathname;
+
+    if (path.startsWith("/api/")) {
+      return handleApiRoute(path, url);
+    }
 
     // Bare root has no canonical locale - redirect (never serve content
     // here directly) so no URL's meaning silently changes the day the

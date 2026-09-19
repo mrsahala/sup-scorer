@@ -23,8 +23,6 @@ import {
 } from "./i18n";
 import type { ScoredHour } from "./scoring";
 import type { Tier } from "./config";
-import type { Spot } from "./spots";
-import type { GeocodeResult } from "./geocode";
 
 function formatDate(locale: Locale, dateStr: string): string {
   const [y, m, d] = dateStr.split("-").map(Number);
@@ -175,6 +173,133 @@ document.getElementById("use-location")?.addEventListener("click", function () {
   );
 }
 
+// Search-then-pinpoint location picker: the search box flies a Leaflet map
+// (PDOK tiles) to a result, then the visitor drags/taps the pin to the
+// exact spot before confirming. Both PDOK calls go through this site's own
+// /api/search and /api/reverse (wrapping geocode.ts's functions) rather
+// than calling PDOK directly from the browser - one place owns that logic,
+// not two copies in TS and JS.
+function LocationPicker({ locale }: { locale: Locale }): JSX.Element {
+  return (
+    <div class="picker">
+      <form id="picker-search-form" class="search">
+        <input type="text" id="picker-search-input" placeholder={t(locale, "searchPlaceholder")} autocomplete="off" />
+        <button type="submit">{t(locale, "searchButton")}</button>
+      </form>
+      <div class="search-results" id="picker-results" hidden></div>
+      <div
+        id="picker-map"
+        class="picker-map"
+        data-locale={locale}
+        data-no-matches={t(locale, "noSearchResults")}
+        data-search-failed={t(locale, "searchFailed")}
+      ></div>
+      <div class="picker-panel" id="picker-panel" hidden>
+        <div class="label">{t(locale, "pickedSpot")}</div>
+        <div class="picker-name" id="picker-name"></div>
+        <a class="picker-go" id="picker-go" href="#">
+          {t(locale, "getConditionsHere")}
+        </a>
+      </div>
+      <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+      <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+      <script
+        dangerouslySetInnerHTML={{
+          __html: `
+(function () {
+  var mapEl = document.getElementById("picker-map");
+  var locale = mapEl.dataset.locale;
+  var NL_CENTER = [52.1, 5.3];
+
+  var map = L.map(mapEl).setView(NL_CENTER, 7);
+  L.tileLayer("https://service.pdok.nl/brt/achtergrondkaart/wmts/v2_0/standaard/EPSG:3857/{z}/{x}/{y}.png", {
+    attribution: "&copy; PDOK / Kadaster",
+    maxZoom: 19
+  }).addTo(map);
+
+  var pinIcon = L.divIcon({
+    className: "picker-pin",
+    html: '<svg width="26" height="26" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M13 2C8.6 2 5 5.5 5 9.8c0 6 8 14 8 14s8-8 8-14C21 5.5 17.4 2 13 2z" fill="var(--signal)" stroke="var(--card)" stroke-width="1.5"/><circle cx="13" cy="9.8" r="3.2" fill="var(--card)"/></svg>',
+    iconSize: [26, 26],
+    iconAnchor: [13, 24]
+  });
+  var marker = null;
+
+  var panel = document.getElementById("picker-panel");
+  var nameEl = document.getElementById("picker-name");
+  var goEl = document.getElementById("picker-go");
+
+  function selectPoint(lat, lon, knownName) {
+    if (!marker) marker = L.marker([lat, lon], { icon: pinIcon, draggable: true }).addTo(map).on("dragend", function () {
+      var pos = marker.getLatLng();
+      selectPoint(pos.lat, pos.lng, null);
+    });
+    else marker.setLatLng([lat, lon]);
+
+    panel.hidden = false;
+    goEl.href = "/" + locale + "/conditions?lat=" + lat + "&lon=" + lon + (knownName ? "&name=" + encodeURIComponent(knownName) : "");
+
+    if (knownName) { nameEl.textContent = knownName; return; }
+    nameEl.textContent = "…";
+    fetch("/api/reverse?lat=" + lat + "&lon=" + lon)
+      .then(function (r) { return r.json(); })
+      .then(function (data) { nameEl.textContent = data.name || nameEl.textContent; })
+      .catch(function () {});
+  }
+
+  map.on("click", function (e) { selectPoint(e.latlng.lat, e.latlng.lng, null); });
+
+  var form = document.getElementById("picker-search-form");
+  var input = document.getElementById("picker-search-input");
+  var resultsEl = document.getElementById("picker-results");
+
+  form.addEventListener("submit", function (e) {
+    e.preventDefault();
+    var q = input.value.trim();
+    if (!q) return;
+    fetch("/api/search?q=" + encodeURIComponent(q))
+      .then(function (r) { return r.json(); })
+      .then(function (results) {
+        resultsEl.innerHTML = "";
+        if (!results.length) {
+          resultsEl.hidden = false;
+          var p = document.createElement("p");
+          p.className = "empty";
+          p.textContent = mapEl.dataset.noMatches || "";
+          resultsEl.appendChild(p);
+          return;
+        }
+        results.forEach(function (r) {
+          var btn = document.createElement("button");
+          btn.type = "button";
+          btn.textContent = r.name;
+          btn.addEventListener("click", function () {
+            map.flyTo([r.lat, r.lon], 15);
+            selectPoint(r.lat, r.lon, r.name);
+            resultsEl.hidden = true;
+            mapEl.scrollIntoView({ behavior: "smooth", block: "center" });
+          });
+          resultsEl.appendChild(btn);
+        });
+        resultsEl.hidden = false;
+      })
+      .catch(function () {
+        resultsEl.innerHTML = "";
+        var p = document.createElement("p");
+        p.className = "empty";
+        p.textContent = mapEl.dataset.searchFailed || "";
+        resultsEl.appendChild(p);
+        resultsEl.hidden = false;
+      });
+  });
+})();
+`,
+        }}
+      />
+    </div>
+  );
+}
+
 // Open-Meteo's free API is CC BY 4.0 - attribution is a license term, not
 // just courtesy. PDOK requires "naamsvermelding" (name attribution) on most
 // of its datasets too. A linked attribution page (rather than inline text
@@ -262,22 +387,21 @@ export function renderSpotPage({
           <p class="empty">{t(locale, "noForecast")}</p>
         )}
         <p class="back">
-          <a href={localizedUrl(locale, "/", "")}>{t(locale, "backToSpots")}</a>
+          <a href={localizedUrl(locale, "/", "")}>{t(locale, "backHome")}</a>
         </p>
       </Layout>
     )
   );
 }
 
-// Renders the homepage: search box + curated spot list.
+// Renders the homepage: search-then-pinpoint location picker (see
+// LocationPicker) - no curated list, any point in the Netherlands works.
 export function renderLandingPage({
   locale,
-  spots,
   currentPath,
   search,
 }: {
   locale: Locale;
-  spots: Spot[];
   currentPath: string;
   search: string;
 }): string {
@@ -286,77 +410,8 @@ export function renderLandingPage({
     render(
       <Layout title={t(locale, "siteTitleLanding")} locale={locale} currentPath={currentPath} search={search}>
         <p class="subtitle">{t(locale, "subtitleLanding")}</p>
-        <form class="search" action={localizedUrl(locale, "/search", "")} method="get">
-          <input type="text" name="q" placeholder={t(locale, "searchPlaceholder")} required />
-          <button type="submit">{t(locale, "searchButton")}</button>
-        </form>
         <GeoLocationButton locale={locale} />
-        <h2>{t(locale, "popularSpots")}</h2>
-        <ul class="spots">
-          {spots.map((s) => (
-            <li key={s.slug}>
-              <a href={localizedUrl(locale, `/spots/${s.slug}`, "")}>{s.name}</a>
-            </li>
-          ))}
-        </ul>
-      </Layout>
-    )
-  );
-}
-
-// Renders PDOK search results for a free-text query.
-export function renderSearchPage({
-  locale,
-  query,
-  results,
-  error,
-  currentPath,
-  search,
-}: {
-  locale: Locale;
-  query: string;
-  results: GeocodeResult[];
-  error?: string;
-  currentPath: string;
-  search: string;
-}): string {
-  let resultsNode: JSX.Element;
-  if (error) {
-    resultsNode = <p class="empty">{error}</p>;
-  } else if (!results.length) {
-    resultsNode = <p class="empty">{t(locale, "noMatches", { query })}</p>;
-  } else {
-    resultsNode = (
-      <ul class="spots">
-        {results.map((r) => {
-          const href = localizedUrl(
-            locale,
-            `/conditions?lat=${r.lat}&lon=${r.lon}&name=${encodeURIComponent(r.name)}`,
-            ""
-          );
-          return (
-            <li key={href}>
-              <a href={href}>{r.name}</a>
-            </li>
-          );
-        })}
-      </ul>
-    );
-  }
-  return (
-    DOCTYPE +
-    render(
-      <Layout
-        title={t(locale, "siteTitleSearch", { query })}
-        locale={locale}
-        currentPath={currentPath}
-        search={search}
-      >
-        <p class="subtitle">{t(locale, "subtitleSearch", { query })}</p>
-        {resultsNode}
-        <p class="back">
-          <a href={localizedUrl(locale, "/", "")}>{t(locale, "backToSpots")}</a>
-        </p>
+        <LocationPicker locale={locale} />
       </Layout>
     )
   );
@@ -412,7 +467,7 @@ export function renderAttributionPage({
           bodyHtml={t(locale, "attrScoringBody", { repoLink })}
         />
         <p class="back">
-          <a href={localizedUrl(locale, "/", "")}>{t(locale, "backToSpots")}</a>
+          <a href={localizedUrl(locale, "/", "")}>{t(locale, "backHome")}</a>
         </p>
       </Layout>
     )
