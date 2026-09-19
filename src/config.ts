@@ -15,10 +15,8 @@ export interface Location {
   timezone: string;
 }
 
-// Default location: used as weather.ts's fallback lat/lon/timezone when a
-// caller doesn't pass its own, and as spots.ts's Amsterdam entry (kept here
-// as the one verified source of truth for that spot, reused rather than
-// duplicated).
+// Default location: weather.ts's fallback lat/lon/timezone when a caller
+// doesn't pass its own.
 export const LOCATION: Location = {
   lat: 52.347890675735485,
   lon: 4.889856145643074,
@@ -27,6 +25,9 @@ export const LOCATION: Location = {
 
 // How many days ahead to fetch/score forecast data for.
 export const LOOKAHEAD_DAYS = 4;
+
+// Where the landing page's map picker opens before a search or GPS fix.
+export const DEFAULT_START_LOCATION: [number, number] = [52.1, 5.3]; // NL center
 
 // One entry of the WIND_TIERS table below: a tier name and the sustained
 // wind speed (km/h) it tops out at, before any gust adjustment.

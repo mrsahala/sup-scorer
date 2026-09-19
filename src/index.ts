@@ -61,7 +61,7 @@ async function handleAppRoute(locale: Locale, path: string, url: URL): Promise<R
   return new Response("Not found", { status: 404 });
 }
 
-// Plain JSON, no HTML - what the landing page's map picker script fetches.
+// JSON API used by the landing page's search/map picker script.
 async function handleApiRoute(path: string, url: URL): Promise<Response> {
   if (path === "/api/search") {
     const query = (url.searchParams.get("q") || "").trim();

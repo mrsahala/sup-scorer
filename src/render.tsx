@@ -22,7 +22,7 @@ import {
   type Locale,
 } from "./i18n";
 import type { ScoredHour } from "./scoring";
-import type { Tier } from "./config";
+import { DEFAULT_START_LOCATION, type Tier } from "./config";
 
 function formatDate(locale: Locale, dateStr: string): string {
   const [y, m, d] = dateStr.split("-").map(Number);
@@ -173,12 +173,13 @@ document.getElementById("use-location")?.addEventListener("click", function () {
   );
 }
 
+// The map picker's pin marker, used as a Leaflet divIcon's html.
+const PIN_ICON_SVG =
+  '<svg width="26" height="26" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M13 2C8.6 2 5 5.5 5 9.8c0 6 8 14 8 14s8-8 8-14C21 5.5 17.4 2 13 2z" fill="var(--pin)" stroke="var(--card)" stroke-width="1.5"/><circle cx="13" cy="9.8" r="3.2" fill="var(--card)"/></svg>';
+
 // Search-then-pinpoint location picker: the search box flies a Leaflet map
 // (PDOK tiles) to a result, then the visitor drags/taps the pin to the
-// exact spot before confirming. Both PDOK calls go through this site's own
-// /api/search and /api/reverse (wrapping geocode.ts's functions) rather
-// than calling PDOK directly from the browser - one place owns that logic,
-// not two copies in TS and JS.
+// exact spot before confirming.
 function LocationPicker({ locale }: { locale: Locale }): JSX.Element {
   return (
     <div class="picker">
@@ -216,9 +217,8 @@ function LocationPicker({ locale }: { locale: Locale }): JSX.Element {
 (function () {
   var mapEl = document.getElementById("picker-map");
   var locale = mapEl.dataset.locale;
-  var NL_CENTER = [52.1, 5.3];
 
-  var map = L.map(mapEl).setView(NL_CENTER, 7);
+  var map = L.map(mapEl).setView(${JSON.stringify(DEFAULT_START_LOCATION)}, 7);
   L.tileLayer("https://service.pdok.nl/brt/achtergrondkaart/wmts/v2_0/standaard/EPSG:3857/{z}/{x}/{y}.png", {
     attribution: "&copy; PDOK / Kadaster",
     maxZoom: 19
@@ -226,7 +226,7 @@ function LocationPicker({ locale }: { locale: Locale }): JSX.Element {
 
   var pinIcon = L.divIcon({
     className: "picker-pin",
-    html: '<svg width="26" height="26" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M13 2C8.6 2 5 5.5 5 9.8c0 6 8 14 8 14s8-8 8-14C21 5.5 17.4 2 13 2z" fill="var(--pin)" stroke="var(--card)" stroke-width="1.5"/><circle cx="13" cy="9.8" r="3.2" fill="var(--card)"/></svg>',
+    html: ${JSON.stringify(PIN_ICON_SVG)},
     iconSize: [26, 26],
     iconAnchor: [13, 24]
   });
@@ -362,11 +362,7 @@ function LocationPicker({ locale }: { locale: Locale }): JSX.Element {
   );
 }
 
-// Open-Meteo's free API is CC BY 4.0 - attribution is a license term, not
-// just courtesy. PDOK requires "naamsvermelding" (name attribution) on most
-// of its datasets too. A linked attribution page (rather than inline text
-// on every page) satisfies both, as long as the link is present on every
-// page and the target page properly credits source + license.
+// Links to the attribution page (required by Open-Meteo/PDOK's license terms).
 function Footer({ locale }: { locale: Locale }): JSX.Element {
   return (
     <footer class="site-footer">
