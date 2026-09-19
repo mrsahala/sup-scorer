@@ -366,7 +366,7 @@ export function renderSearchPage({
 // already embedded as raw HTML (built by i18n.ts's t() via plain
 // placeholder substitution, not escaped). dangerouslySetInnerHTML is safe
 // here specifically because every value substituted into those sentences
-// (openMeteoLink/licenseLink/pdokLink/repoLink/configLink below) is a
+// (openMeteoLink/licenseLink/pdokLink/repoLink below) is a
 // hardcoded constant in this file, never anything from a request - unlike
 // every other dynamic value on this page, which flows through normal JSX
 // children and gets auto-escaped.
@@ -393,7 +393,6 @@ export function renderAttributionPage({
   const licenseLink = `<a href="https://creativecommons.org/licenses/by/4.0/" rel="noopener">CC BY 4.0</a>`;
   const pdokLink = `<a href="https://www.pdok.nl/" rel="noopener">PDOK</a>`;
   const repoLink = `<a href="https://github.com/mrsahala/sup-scorer" rel="noopener">GitHub repository</a>`;
-  const configLink = `<a href="https://github.com/mrsahala/sup-scorer/blob/main/src/config.ts" rel="noopener">src/config.ts</a>`;
 
   return (
     DOCTYPE +
@@ -410,7 +409,7 @@ export function renderAttributionPage({
         />
         <AttributionSection
           heading={t(locale, "attrScoringHeading")}
-          bodyHtml={t(locale, "attrScoringBody", { repoLink, configLink })}
+          bodyHtml={t(locale, "attrScoringBody", { repoLink })}
         />
         <p class="back">
           <a href={localizedUrl(locale, "/", "")}>{t(locale, "backToSpots")}</a>
