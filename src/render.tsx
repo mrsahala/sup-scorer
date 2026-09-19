@@ -182,11 +182,18 @@ document.getElementById("use-location")?.addEventListener("click", function () {
 function LocationPicker({ locale }: { locale: Locale }): JSX.Element {
   return (
     <div class="picker">
-      <form id="picker-search-form" class="search">
-        <input type="text" id="picker-search-input" placeholder={t(locale, "searchPlaceholder")} autocomplete="off" />
-        <button type="submit">{t(locale, "searchButton")}</button>
-      </form>
-      <div class="search-results" id="picker-results" hidden></div>
+      <div class="search-wrap">
+        <form id="picker-search-form" class="search">
+          <input
+            type="text"
+            id="picker-search-input"
+            placeholder={t(locale, "searchPlaceholder")}
+            autocomplete="off"
+          />
+          <button type="submit">{t(locale, "searchButton")}</button>
+        </form>
+        <div class="autocomplete" id="picker-autocomplete" hidden></div>
+      </div>
       <div
         id="picker-map"
         class="picker-map"
@@ -219,7 +226,7 @@ function LocationPicker({ locale }: { locale: Locale }): JSX.Element {
 
   var pinIcon = L.divIcon({
     className: "picker-pin",
-    html: '<svg width="26" height="26" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M13 2C8.6 2 5 5.5 5 9.8c0 6 8 14 8 14s8-8 8-14C21 5.5 17.4 2 13 2z" fill="var(--signal)" stroke="var(--card)" stroke-width="1.5"/><circle cx="13" cy="9.8" r="3.2" fill="var(--card)"/></svg>',
+    html: '<svg width="26" height="26" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M13 2C8.6 2 5 5.5 5 9.8c0 6 8 14 8 14s8-8 8-14C21 5.5 17.4 2 13 2z" fill="var(--pin)" stroke="var(--card)" stroke-width="1.5"/><circle cx="13" cy="9.8" r="3.2" fill="var(--card)"/></svg>',
     iconSize: [26, 26],
     iconAnchor: [13, 24]
   });
@@ -251,7 +258,10 @@ function LocationPicker({ locale }: { locale: Locale }): JSX.Element {
 
   var form = document.getElementById("picker-search-form");
   var input = document.getElementById("picker-search-input");
-  var resultsEl = document.getElementById("picker-results");
+  var dropdown = document.getElementById("picker-autocomplete");
+  var results = [];
+  var activeIndex = -1;
+  var debounceTimer = null;
 
   function goToResult(r) {
     map.flyTo([r.lat, r.lon], 15);
@@ -259,43 +269,90 @@ function LocationPicker({ locale }: { locale: Locale }): JSX.Element {
     mapEl.scrollIntoView({ behavior: "smooth", block: "center" });
   }
 
+  function closeDropdown() {
+    dropdown.hidden = true;
+    dropdown.innerHTML = "";
+    activeIndex = -1;
+  }
+
   function showMessage(text) {
-    resultsEl.innerHTML = "";
+    dropdown.innerHTML = "";
     var p = document.createElement("p");
     p.className = "empty";
     p.textContent = text || "";
-    resultsEl.appendChild(p);
-    resultsEl.hidden = false;
+    dropdown.appendChild(p);
+    dropdown.hidden = false;
   }
+
+  function pick(r) {
+    input.value = r.name;
+    goToResult(r);
+    closeDropdown();
+  }
+
+  function renderDropdown() {
+    dropdown.innerHTML = "";
+    results.forEach(function (r, i) {
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.textContent = r.name;
+      if (i === activeIndex) btn.className = "active";
+      // mousedown (fires before the input's blur) + preventDefault, so
+      // tapping a suggestion doesn't lose the selection to blur closing
+      // the dropdown first.
+      btn.addEventListener("mousedown", function (e) {
+        e.preventDefault();
+        pick(r);
+      });
+      dropdown.appendChild(btn);
+    });
+    dropdown.hidden = false;
+  }
+
+  // Live suggestions as you type - like a search engine's autocomplete,
+  // not a results page. Debounced so every keystroke doesn't hit the API.
+  input.addEventListener("input", function () {
+    var q = input.value.trim();
+    clearTimeout(debounceTimer);
+    if (!q) { closeDropdown(); return; }
+    debounceTimer = setTimeout(function () {
+      fetch("/api/search?q=" + encodeURIComponent(q))
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          results = data;
+          activeIndex = -1;
+          if (!results.length) { showMessage(mapEl.dataset.noMatches); return; }
+          renderDropdown();
+        })
+        .catch(function () { results = []; showMessage(mapEl.dataset.searchFailed); });
+    }, 250);
+  });
+
+  input.addEventListener("keydown", function (e) {
+    if (!results.length) return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      activeIndex = (activeIndex + 1) % results.length;
+      renderDropdown();
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      activeIndex = (activeIndex - 1 + results.length) % results.length;
+      renderDropdown();
+    } else if (e.key === "Escape") {
+      closeDropdown();
+    }
+  });
+
+  // Delayed so a suggestion's mousedown (above) still gets to run first.
+  input.addEventListener("blur", function () { setTimeout(closeDropdown, 150); });
 
   form.addEventListener("submit", function (e) {
     e.preventDefault();
-    var q = input.value.trim();
-    if (!q) return;
-    fetch("/api/search?q=" + encodeURIComponent(q))
-      .then(function (r) { return r.json(); })
-      .then(function (results) {
-        if (!results.length) { showMessage(mapEl.dataset.noMatches); return; }
-
-        // Whatever type the top match is (city, address, POI - no further
-        // filtering here), go straight there - the list below is only for
-        // when that guess isn't the one you meant.
-        goToResult(results[0]);
-
-        resultsEl.innerHTML = "";
-        results.forEach(function (r) {
-          var btn = document.createElement("button");
-          btn.type = "button";
-          btn.textContent = r.name;
-          btn.addEventListener("click", function () {
-            goToResult(r);
-            resultsEl.hidden = true;
-          });
-          resultsEl.appendChild(btn);
-        });
-        resultsEl.hidden = false;
-      })
-      .catch(function () { showMessage(mapEl.dataset.searchFailed); });
+    clearTimeout(debounceTimer);
+    // Whatever type the top (or keyboard-highlighted) match is - city,
+    // address, POI, no further filtering - go straight there.
+    var chosen = results[activeIndex >= 0 ? activeIndex : 0];
+    if (chosen) pick(chosen);
   });
 })();
 `,
