@@ -10,6 +10,7 @@
   --ok: #c98a12;
   --poor: #c1481f;
   --avoid: #8a2a2a;
+  --pin: #c1481f;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -19,6 +20,7 @@
     --muted: #93a3ad;
     --card: #141d22;
     --border: #263139;
+    --pin: #e0693f;
   }
 }
 
@@ -126,23 +128,56 @@ h2 {
   cursor: default;
 }
 
-.search-results {
-  display: grid;
-  gap: 8px;
-  margin: -4px 0 16px;
+.search-wrap {
+  position: relative;
+  margin-bottom: 8px;
 }
 
-.search-results button {
+.autocomplete {
+  position: absolute;
+  /* Leaflet's own controls (zoom buttons, attribution) sit at z-index:
+     1000 - this has to clear that or the map's zoom control pokes through
+     the dropdown when it overlaps the map's top edge. */
+  z-index: 1001;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 4px;
+  display: grid;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+}
+
+.autocomplete button {
   display: block;
   width: 100%;
   text-align: left;
   padding: 10px 16px;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 8px;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--border);
   color: var(--fg);
   font-size: 0.95rem;
   cursor: pointer;
+}
+
+.autocomplete button:last-child {
+  border-bottom: none;
+}
+
+.autocomplete button:hover,
+.autocomplete button.active {
+  background: var(--bg);
+}
+
+.autocomplete .empty {
+  margin: 0;
+  padding: 10px 16px;
+  color: var(--muted);
+  font-size: 0.9rem;
 }
 
 .picker-map {

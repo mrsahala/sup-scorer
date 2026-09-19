@@ -22,7 +22,8 @@ interface PdokResponse {
 
 export async function searchLocation(query: string, { limit = 5 }: { limit?: number } = {}): Promise<GeocodeResult[]> {
   const url = new URL(ENDPOINT);
-  url.searchParams.set("q", query);
+  // Prefix match the input.
+  url.searchParams.set("q", /[*~]$/.test(query) ? query : `${query}*`);
   url.searchParams.set("fl", "weergavenaam,centroide_ll,type");
   url.searchParams.set("rows", String(limit));
   // gemeente/provincie are broad administrative regions, not places someone
