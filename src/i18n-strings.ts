@@ -53,7 +53,7 @@ const EN = {
     "Free-text Netherlands location search is powered by {pdokLink}, Dutch government open geodata.",
   attrScoringHeading: "Scoring logic",
   attrScoringBody:
-    "The site's code is open source (MIT licensed) - see the {repoLink}. The exact wind/gust/temperature thresholds behind each tier are in {configLink} - no hidden logic.",
+    "The site's code is open source (MIT licensed) - see the {repoLink}.",
 } as const;
 
 // The set of translatable keys, and the shape every locale's dictionary
@@ -100,7 +100,7 @@ const NL: Dictionary = {
     "Vrije tekst zoeken naar locaties in Nederland wordt mogelijk gemaakt door {pdokLink}, open geodata van de Nederlandse overheid.",
   attrScoringHeading: "Scorelogica",
   attrScoringBody:
-    "De code van deze site is open source (MIT-licentie) - zie de {repoLink}. De exacte wind/windstoot/temperatuur-drempels achter elke score staan in {configLink} - geen verborgen logica.",
+    "De code van deze site is open source (MIT-licentie) - zie de {repoLink}.",
 };
 
 const DE: Dictionary = {
@@ -141,7 +141,7 @@ const DE: Dictionary = {
     "Die Freitext-Ortssuche für die Niederlande wird von {pdokLink} bereitgestellt, offenen Geodaten der niederländischen Regierung.",
   attrScoringHeading: "Bewertungslogik",
   attrScoringBody:
-    "Der Code dieser Seite ist Open Source (MIT-Lizenz) - siehe das {repoLink}. Die genauen Wind-/Böen-/Temperaturschwellen hinter jeder Stufe stehen in {configLink} - keine versteckte Logik.",
+    "Der Code dieser Seite ist Open Source (MIT-Lizenz) - siehe das {repoLink}.",
 };
 
 export const STRINGS: Record<Locale, Dictionary> = { en: EN, nl: NL, de: DE };
