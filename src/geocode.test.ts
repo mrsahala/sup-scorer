@@ -36,6 +36,24 @@ describe("searchLocation", () => {
     assert.deepEqual(url.searchParams.getAll("fq"), ["-type:gemeente", "-type:provincie"]);
   });
 
+  test("appends a wildcard so a partial word like 'amster' still matches", async (t) => {
+    const calls = mockFetch(t, [
+      { match: (url) => url.includes("locatieserver/search/v3_1/free"), respond: () => ({ status: 200, json: { response: { docs: [] } } }) },
+    ]);
+    await searchLocation("amster");
+    const url = new URL(calls[0]!.url);
+    assert.equal(url.searchParams.get("q"), "amster*");
+  });
+
+  test("does not double up a wildcard the caller already supplied", async (t) => {
+    const calls = mockFetch(t, [
+      { match: (url) => url.includes("locatieserver/search/v3_1/free"), respond: () => ({ status: 200, json: { response: { docs: [] } } }) },
+    ]);
+    await searchLocation("amster*");
+    const url = new URL(calls[0]!.url);
+    assert.equal(url.searchParams.get("q"), "amster*");
+  });
+
   test("skips a doc with no parseable centroide_ll", async (t) => {
     mockFetch(t, [
       {

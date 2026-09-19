@@ -135,7 +135,10 @@ h2 {
 
 .autocomplete {
   position: absolute;
-  z-index: 10;
+  /* Leaflet's own controls (zoom buttons, attribution) sit at z-index:
+     1000 - this has to clear that or the map's zoom control pokes through
+     the dropdown when it overlaps the map's top edge. */
+  z-index: 1001;
   top: 100%;
   left: 0;
   right: 0;
