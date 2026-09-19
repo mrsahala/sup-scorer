@@ -1,7 +1,4 @@
-// Forward (free-text search) and reverse (lat/lon -> place name) NL
-// geocoding via PDOK's Locatieserver - Dutch government, free/keyless,
-// chosen over Nominatim's shared demo server for NL-specific coverage and
-// looser rate limits.
+// Forward and reverse NL geocoding via PDOK's Locatieserver.
 const ENDPOINT = "https://api.pdok.nl/bzk/locatieserver/search/v3_1/free";
 const REVERSE_ENDPOINT = "https://api.pdok.nl/bzk/locatieserver/search/v3_1/reverse";
 
@@ -45,6 +42,7 @@ export async function searchLocation(query: string, { limit = 5 }: { limit?: num
   return results;
 }
 
+// The shape of PDOK's reverse-lookup response (only the field requested).
 interface PdokReverseResponse {
   response?: {
     docs?: { weergavenaam: string }[];
@@ -64,24 +62,16 @@ async function reverseGeocodeByType(lat: number, lon: number, type: string): Pro
     if (!resp.ok) return null;
     const data = (await resp.json()) as PdokReverseResponse;
     const name = data.response?.docs?.[0]?.weergavenaam;
-    // woonplaats' weergavenaam repeats the name across place/municipality/
-    // province ("Utrecht, Utrecht, Utrecht") - only buurt's format doesn't
-    // have a comma to begin with, so this is a no-op there.
+    // woonplaats repeats itself ("Utrecht, Utrecht, Utrecht") - keep only the first part.
     return name ? name.split(",")[0]!.trim() : null;
   } catch {
     return null;
   }
 }
 
-// Best-effort "what's this coordinate near" lookup, backing the GPS "use my
-// location" button's display name. Tries buurt (neighborhood) level first -
-// "Diamantbuurt Amsterdam" reads better than just "Amsterdam" - falling
-// back to woonplaats (town/city) for a spot with no neighborhood
-// classification (verified buurt still resolves fine right up to the
-// water's edge for typical SUP spots, but a fallback costs nothing and
-// covers anything more remote). Returns null (never throws) if both fail -
-// this is a nice-to-have label, not worth failing the whole conditions
-// page over.
+// "What's this coordinate near", for the GPS button's display name. Tries
+// neighborhood level first, falls back to city. Never throws - null just
+// means the caller shows a generic fallback instead.
 export async function reverseGeocode(lat: number, lon: number): Promise<string | null> {
   return (await reverseGeocodeByType(lat, lon, "buurt")) ?? (await reverseGeocodeByType(lat, lon, "woonplaats"));
 }
