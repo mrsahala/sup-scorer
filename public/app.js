@@ -399,6 +399,7 @@ function addChip(page, spot) {
   name.textContent = shortName(spot.name);
   chip.append(document.createElement("i"), name, document.createElement("small"));
   chips.prepend(chip);
+  while (chips.children.length > MAX_SPOTS) chips.lastElementChild.remove(); // the cookie drops the oldest too
   fillGlance(page.locale, chip);
 }
 
