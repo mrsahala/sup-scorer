@@ -1,0 +1,223 @@
+<!doctype html>
+<!--
+  Static fixture for the ribbon DOM contract (ribbon-ux.md section 3).
+  Hand-written markup, fake numbers, no JS. Open it in a browser.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Ribbon fixture</title>
+<link rel="stylesheet" href="../../public/style.css" />
+</head>
+<body>
+<header class="hdr"><div class="hdr-in">
+  <a class="wordmark" href="#"><i></i>supdawg</a>
+  <nav class="lang-switch"><strong>en</strong> · <a href="#">nl</a> · <a href="#">de</a></nav>
+</div></header>
+
+<main>
+  <section class="title-block" id="title-block" data-open="false">
+    <div class="title-row">
+      <button class="spot-btn" id="spot-btn" aria-expanded="false" aria-controls="switcher">
+        <span class="spot-name">Loosdrecht</span>
+        <svg class="chev" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8l5 5 5-5"/></svg>
+      </button>
+      <button class="star" id="star" aria-pressed="true" aria-label="Remove from saved spots">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1.1 5.9L12 16.9l-5.3 2.8 1.1-5.9-4.3-4.1 5.9-.8z"/></svg>
+      </button>
+      <button class="star gps" id="gps" aria-pressed="false" aria-label="Use my location">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="10" cy="10" r="3"/><circle cx="10" cy="10" r="7"/><path d="M10 1v2M10 17v2M1 10h2M17 10h2"/></svg>
+      </button>
+    </div>
+    <p class="sub tier-good"><i class="dot"></i><span>Best today <b class="mono">11:00–14:00</b> · <b>Good</b></span></p>
+    <div class="switcher" id="switcher"><div><div class="switcher-card">
+      <div class="search-wrap">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="9" cy="9" r="6"/><path d="M14 14l4 4"/></svg>
+        <input class="search" id="search" type="search" placeholder="Search any place in the Netherlands" autocomplete="off">
+      </div>
+      <div class="list" id="results" role="listbox"></div>
+      <div class="hint" id="hint" hidden></div>
+      <div class="list-h" id="saved-h">Saved spots</div>
+      <div class="list" id="saved">
+        <div class="row"><svg class="ic" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1.1 5.9L12 16.9l-5.3 2.8 1.1-5.9-4.3-4.1 5.9-.8z"/></svg><span class="nm">Loosdrecht</span></div>
+      </div>
+    </div></div></div>
+  </section>
+
+  <div class="chips" id="chips">
+    <a class="chip active tier-good" href="#"><i></i><span>Loosdrecht</span><small>Today 11–14</small></a>
+    <a class="chip tier-poor" href="#"><i></i><span>Kralingse Plas</span><small>no window</small></a>
+    <a class="chip" href="#"><i></i><span>Zandvoort</span><small></small></a>
+  </div>
+
+  <div class="days" id="days">
+    <section class="card" data-date="2026-09-20">
+      <div class="card-h"><div class="day-l">Today<small>20 Sept</small></div><span class="pill tier-good"><i></i>Good <span class="mono">11–14</span></span></div>
+      <div class="meta">wind <span class="mono">7–24</span> km/h · <span class="mono">17–18</span>°C · daylight <span class="mono">08:00–19:00</span></div>
+
+      <div class="ribbon" style="--n:12" tabindex="0" role="img" aria-label="Hourly conditions for today" data-n="12" data-sel="3" data-now="3.35">
+        <div class="strip">
+          <span class="seg tier-poor" style="--span:1"></span>
+          <span class="seg tier-marginal" style="--span:1"></span>
+          <span class="seg tier-marginal" style="--span:1"></span>
+          <span class="seg win tier-good" style="--span:3"><b>Good 3h</b></span>
+          <span class="seg tier-poor" style="--span:2"></span>
+          <span class="seg win tier-great" style="--span:2"><b>Great 2h</b></span>
+          <span class="seg tier-poor" style="--span:1"></span>
+          <span class="seg tier-marginal" style="--span:1"></span>
+        </div>
+        <div class="chart">
+          <svg class="curves" viewBox="0 0 1000 400" preserveAspectRatio="none" aria-hidden="true">
+            <defs>
+              <clipPath id="area-2026-09-20">
+                <path d="M0 170 L41.67 170 L125 220 L208.33 230 L291.67 270 L375 280 L458.33 260 L541.67 160 L625 180 L708.33 320 L791.67 170 L875 190 L958.33 210 L1000 210 L1000 400 L0 400 Z"/>
+              </clipPath>
+            </defs>
+            <g class="guides">
+              <line x1="0" x2="1000" y1="300" y2="300"/>
+              <line x1="0" x2="1000" y1="250" y2="250"/>
+              <line x1="0" x2="1000" y1="200" y2="200"/>
+              <line x1="0" x2="1000" y1="150" y2="150"/>
+            </g>
+            <g clip-path="url(#area-2026-09-20)">
+              <rect class="tier-col tier-poor" x="0" width="83.33" y="0" height="400"/>
+              <rect class="tier-col tier-marginal" x="83.33" width="83.33" y="0" height="400"/>
+              <rect class="tier-col tier-marginal" x="166.67" width="83.33" y="0" height="400"/>
+              <rect class="tier-col tier-good" x="250" width="83.33" y="0" height="400"/>
+              <rect class="tier-col tier-good" x="333.33" width="83.33" y="0" height="400"/>
+              <rect class="tier-col tier-good" x="416.67" width="83.33" y="0" height="400"/>
+              <rect class="tier-col tier-poor" x="500" width="83.33" y="0" height="400"/>
+              <rect class="tier-col tier-poor" x="583.33" width="83.33" y="0" height="400"/>
+              <rect class="tier-col tier-great" x="666.67" width="83.33" y="0" height="400"/>
+              <rect class="tier-col tier-great" x="750" width="83.33" y="0" height="400"/>
+              <rect class="tier-col tier-poor" x="833.33" width="83.33" y="0" height="400"/>
+              <rect class="tier-col tier-marginal" x="916.67" width="83.33" y="0" height="400"/>
+            </g>
+            <path class="gust-band" d="M0 60 L41.67 60 L125 130 L208.33 150 L291.67 210 L375 220 L458.33 200 L541.67 40 L625 70 L708.33 280 L791.67 50 L875 80 L958.33 120 L1000 120 L1000 210 L958.33 210 L875 190 L791.67 170 L708.33 320 L625 180 L541.67 160 L458.33 260 L375 280 L291.67 270 L208.33 230 L125 220 L41.67 170 L0 170 Z"/>
+            <path class="gust-line" vector-effect="non-scaling-stroke" d="M0 60 L41.67 60 L125 130 L208.33 150 L291.67 210 L375 220 L458.33 200 L541.67 40 L625 70 L708.33 280 L791.67 50 L875 80 L958.33 120 L1000 120"/>
+            <path class="wind-line" vector-effect="non-scaling-stroke" d="M0 170 L41.67 170 L125 220 L208.33 230 L291.67 270 L375 280 L458.33 260 L541.67 160 L625 180 L708.33 320 L791.67 170 L875 190 L958.33 210 L1000 210"/>
+          </svg>
+          <div class="guide-labels">
+            <span class="tier-great" style="--y:75%">great ≤10</span>
+            <span class="tier-good" style="--y:62.5%">good ≤15</span>
+            <span class="tier-marginal" style="--y:50%">marginal ≤20</span>
+            <span class="tier-poor" style="--y:37.5%">poor ≤25</span>
+          </div>
+          <div class="key"><span class="k-wind">wind</span><span class="k-gust">gust</span></div>
+          <div class="now" style="--x:32.08%"><b>now</b></div>
+          <div class="col-hi" style="--x:25%;--w:8.33%"></div>
+          <div class="cursor" style="--x:29.17%"><i style="--y:67.5%"></i></div>
+        </div>
+        <div class="axis">
+          <span>08</span><span></span><span>10</span><span></span><span>12</span><span></span>
+          <span>14</span><span></span><span>16</span><span></span><span>18</span><span></span>
+        </div>
+        <div class="arrows">
+          <span style="--rot:200deg"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 10V2M3 5l3-3 3 3"/></svg></span>
+          <span style="--rot:205deg"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 10V2M3 5l3-3 3 3"/></svg></span>
+          <span style="--rot:215deg"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 10V2M3 5l3-3 3 3"/></svg></span>
+          <span style="--rot:290deg"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 10V2M3 5l3-3 3 3"/></svg></span>
+          <span style="--rot:285deg"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 10V2M3 5l3-3 3 3"/></svg></span>
+          <span style="--rot:280deg"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 10V2M3 5l3-3 3 3"/></svg></span>
+          <span style="--rot:180deg"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 10V2M3 5l3-3 3 3"/></svg></span>
+          <span style="--rot:190deg"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 10V2M3 5l3-3 3 3"/></svg></span>
+          <span style="--rot:320deg"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 10V2M3 5l3-3 3 3"/></svg></span>
+          <span style="--rot:210deg"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 10V2M3 5l3-3 3 3"/></svg></span>
+          <span style="--rot:220deg"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 10V2M3 5l3-3 3 3"/></svg></span>
+          <span style="--rot:230deg"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 10V2M3 5l3-3 3 3"/></svg></span>
+        </div>
+      </div>
+      <div class="detail tier-good" aria-live="polite">
+        <span class="tm">11:00</span><span class="vd">Good</span>
+        <span class="it"><span class="mono">13.0 → 19.0</span> km/h</span>
+        <span class="it"><span class="mono">17.5°C</span></span>
+        <span class="it">from WNW <svg class="ar" style="--rot:290deg" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 10V2M3 5l3-3 3 3"/></svg></span>
+        <span class="why">sustained 13 km/h</span>
+      </div>
+    </section>
+
+    <section class="card" data-date="2026-09-21">
+      <div class="card-h"><div class="day-l">Tomorrow<small>21 Sept</small></div><span class="pill tier-great"><i></i>Great <span class="mono">10–18</span></span></div>
+      <div class="meta">wind <span class="mono">6–23</span> km/h · <span class="mono">16–18</span>°C · daylight <span class="mono">08:00–19:00</span></div>
+
+      <div class="ribbon" style="--n:12" tabindex="0" role="img" aria-label="Hourly conditions for tomorrow" data-n="12" data-sel="2">
+        <div class="strip">
+          <span class="seg tier-marginal" style="--span:1"></span>
+          <span class="seg tier-poor" style="--span:1"></span>
+          <span class="seg win tier-great" style="--span:8"><b>Great 8h</b></span>
+          <span class="seg win tier-marginal" style="--span:2"><b>Marginal 2h</b></span>
+        </div>
+        <div class="chart">
+          <svg class="curves" viewBox="0 0 1000 400" preserveAspectRatio="none" aria-hidden="true">
+            <defs>
+              <clipPath id="area-2026-09-21">
+                <path d="M0 210 L41.67 210 L125 170 L208.33 320 L291.67 330 L375 310 L458.33 340 L541.67 320 L625 310 L708.33 330 L791.67 310 L875 180 L958.33 220 L1000 220 L1000 400 L0 400 Z"/>
+              </clipPath>
+            </defs>
+            <g class="guides">
+              <line x1="0" x2="1000" y1="300" y2="300"/>
+              <line x1="0" x2="1000" y1="250" y2="250"/>
+              <line x1="0" x2="1000" y1="200" y2="200"/>
+              <line x1="0" x2="1000" y1="150" y2="150"/>
+            </g>
+            <g clip-path="url(#area-2026-09-21)">
+              <rect class="tier-col tier-marginal" x="0" width="83.33" y="0" height="400"/>
+              <rect class="tier-col tier-poor" x="83.33" width="83.33" y="0" height="400"/>
+              <rect class="tier-col tier-great" x="166.67" width="83.33" y="0" height="400"/>
+              <rect class="tier-col tier-great" x="250" width="83.33" y="0" height="400"/>
+              <rect class="tier-col tier-great" x="333.33" width="83.33" y="0" height="400"/>
+              <rect class="tier-col tier-great" x="416.67" width="83.33" y="0" height="400"/>
+              <rect class="tier-col tier-great" x="500" width="83.33" y="0" height="400"/>
+              <rect class="tier-col tier-great" x="583.33" width="83.33" y="0" height="400"/>
+              <rect class="tier-col tier-great" x="666.67" width="83.33" y="0" height="400"/>
+              <rect class="tier-col tier-great" x="750" width="83.33" y="0" height="400"/>
+              <rect class="tier-col tier-marginal" x="833.33" width="83.33" y="0" height="400"/>
+              <rect class="tier-col tier-marginal" x="916.67" width="83.33" y="0" height="400"/>
+            </g>
+            <path class="gust-band" d="M0 110 L41.67 110 L125 50 L208.33 270 L291.67 290 L375 260 L458.33 300 L541.67 280 L625 270 L708.33 290 L791.67 260 L875 60 L958.33 130 L1000 130 L1000 220 L958.33 220 L875 180 L791.67 310 L708.33 330 L625 310 L541.67 320 L458.33 340 L375 310 L291.67 330 L208.33 320 L125 170 L41.67 210 L0 210 Z"/>
+            <path class="gust-line" vector-effect="non-scaling-stroke" d="M0 110 L41.67 110 L125 50 L208.33 270 L291.67 290 L375 260 L458.33 300 L541.67 280 L625 270 L708.33 290 L791.67 260 L875 60 L958.33 130 L1000 130"/>
+            <path class="wind-line" vector-effect="non-scaling-stroke" d="M0 210 L41.67 210 L125 170 L208.33 320 L291.67 330 L375 310 L458.33 340 L541.67 320 L625 310 L708.33 330 L791.67 310 L875 180 L958.33 220 L1000 220"/>
+          </svg>
+          <div class="guide-labels">
+            <span class="tier-great" style="--y:75%">great ≤10</span>
+            <span class="tier-good" style="--y:62.5%">good ≤15</span>
+            <span class="tier-marginal" style="--y:50%">marginal ≤20</span>
+            <span class="tier-poor" style="--y:37.5%">poor ≤25</span>
+          </div>
+          <div class="key"><span class="k-wind">wind</span><span class="k-gust">gust</span></div>
+          <div class="col-hi" style="--x:16.67%;--w:8.33%"></div>
+          <div class="cursor" style="--x:20.83%"><i style="--y:80%"></i></div>
+        </div>
+        <div class="axis">
+          <span>08</span><span></span><span>10</span><span></span><span>12</span><span></span>
+          <span>14</span><span></span><span>16</span><span></span><span>18</span><span></span>
+        </div>
+        <div class="arrows">
+          <span style="--rot:210deg"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 10V2M3 5l3-3 3 3"/></svg></span>
+          <span style="--rot:220deg"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 10V2M3 5l3-3 3 3"/></svg></span>
+          <span style="--rot:315deg"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 10V2M3 5l3-3 3 3"/></svg></span>
+          <span style="--rot:310deg"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 10V2M3 5l3-3 3 3"/></svg></span>
+          <span style="--rot:300deg"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 10V2M3 5l3-3 3 3"/></svg></span>
+          <span style="--rot:305deg"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 10V2M3 5l3-3 3 3"/></svg></span>
+          <span style="--rot:295deg"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 10V2M3 5l3-3 3 3"/></svg></span>
+          <span style="--rot:290deg"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 10V2M3 5l3-3 3 3"/></svg></span>
+          <span style="--rot:300deg"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 10V2M3 5l3-3 3 3"/></svg></span>
+          <span style="--rot:285deg"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 10V2M3 5l3-3 3 3"/></svg></span>
+          <span style="--rot:215deg"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 10V2M3 5l3-3 3 3"/></svg></span>
+          <span style="--rot:205deg"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 10V2M3 5l3-3 3 3"/></svg></span>
+        </div>
+      </div>
+      <div class="detail tier-great" aria-live="polite">
+        <span class="tm">10:00</span><span class="vd">Great</span>
+        <span class="it"><span class="mono">8.0 → 13.0</span> km/h</span>
+        <span class="it"><span class="mono">18.0°C</span></span>
+        <span class="it">from NW <svg class="ar" style="--rot:315deg" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 10V2M3 5l3-3 3 3"/></svg></span>
+        <span class="why"></span>
+      </div>
+    </section>
+  </div>
+</main>
+<footer class="site-footer"><a href="#">Open-Meteo · PDOK data attribution</a></footer>
+</body>
+</html>
