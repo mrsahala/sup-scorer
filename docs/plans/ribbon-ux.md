@@ -142,7 +142,7 @@ final. Attributes marked `data-*` are what `app.js` reads.
       <div class="card-h"><div class="day-l">Today<small>20 Sept</small></div><span class="pill tier-good"><i></i>Good <span class="mono">08–11</span></span></div>
       <div class="meta">wind <span class="mono">14–26</span> km/h · <span class="mono">17–18</span>°C · daylight <span class="mono">08:00–19:00</span></div>
 
-      <div class="ribbon" tabindex="0" role="img" aria-label="…" data-n="12" data-sel="3" data-now="3.35">
+      <div class="ribbon" tabindex="0" role="img" aria-label="…" data-n="12" data-sel="3" data-now="3.35" style="--n:12">
         <div class="strip">
           <span class="seg win tier-good" style="--span:3"><b>Good 3h</b></span>
           <span class="seg tier-poor" style="--span:1"></span>
@@ -184,7 +184,7 @@ final. Attributes marked `data-*` are what `app.js` reads.
 Geometry rules for the ribbon (port from `renderRibbon` in the prototype,
 adapted to percentages):
 
-- `n` = daylight hours in the day. Every horizontal position is `(i + 0.5) / n * 100%` for a center, `i / n * 100%` for a column start, `100 / n %` for a column width.
+- `n` = daylight hours in the day. Every horizontal position is `(i + 0.5) / n * 100%` for a center, `i / n * 100%` for a column start, `100 / n %` for a column width. `n` is emitted twice on `.ribbon`: `data-n` for `app.js` and `--n` for CSS, which cannot read a data attribute and needs it for the alternating hour stripes.
 - Y scale is fixed 0–40 km/h across all days (`Y_MAX = 40`); values above 40 clamp. In the SVG, `y = 400 - min(v, 40) / 40 * 400`. As a CSS percentage from the top, `(1 - min(v,40)/40) * 100%`.
 - Threshold guides at 10, 15, 20, 25 km/h, colored by tier (great/good/marginal/poor). Labels sit outside the chart on the right at ≥ 560px, inside the chart at the left edge below 560px (CSS only).
 - The wind and gust curves are Fritsch–Carlson monotone cubic paths through hour centers, extended flat to x=0 and x=1000. Copy `monotone()` from the prototype.
