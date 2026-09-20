@@ -1,10 +1,12 @@
-// Public multi-location SUP conditions site. URL scheme is always-prefix
-// (/en/..., /nl/..., /de/...) - see i18n.ts for why. "/<locale>/" resolves
-// the visitor's spot (sd_last cookie -> IP -> default) and renders it
-// directly - no landing page. "/<locale>/conditions?lat=&lon=" renders any
-// other point and remembers it as sd_last. "/api/search" and "/api/reverse"
-// are plain JSON endpoints the switcher's client-side script calls (a later
-// PR); "/api/glance" is the chip badge endpoint.
+// The Worker's entry point: routing, spot resolution, and the JSON APIs.
+//
+// Every URL is locale-prefixed (/en/..., /nl/..., /de/...) - see i18n.ts.
+//
+// "/<locale>/" resolves the visitor's spot (sd_last cookie -> IP -> default)
+// and renders it directly; there is no landing page. "/<locale>/conditions"
+// renders any other point and remembers it as sd_last.
+//
+// "/api/*" are plain JSON, called by the client-side script.
 import { fetchForecast } from "./weather";
 import { scoreHour, type ScoredHour } from "./scoring";
 import { LOCATION, type Tier } from "./config";
@@ -22,7 +24,7 @@ interface Env {
   ASSETS: Fetcher;
 }
 
-// LOCATION is the prototype's DEFAULT_SPOT (Amsterdamse Bos) but has no name field.
+// Title shown when the visitor's location can't be determined.
 const DEFAULT_SPOT_NAME = "Amsterdamse Bos";
 
 const html = (body: string) => new Response(body, { headers: { "content-type": "text/html; charset=utf-8" } });
@@ -144,6 +146,8 @@ async function buildGlance(lat: number, lon: number, locale: Locale): Promise<{ 
   return { tier: g.tier, text: `${when} ${span}` };
 }
 
+// Chip badges show a coarse "Today 08-11" summary, so they can lag the
+// forecast by a few minutes. 10 min keeps repeat chip loads off Open-Meteo.
 const GLANCE_CACHE_TTL_SECONDS = 600;
 
 // Untyped via globalThis: lib.dom's CacheStorage (pulled in via Node's fetch typings) shadows
