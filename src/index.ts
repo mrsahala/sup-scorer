@@ -27,12 +27,27 @@ async function computeScoredHours({ lat, lon }: { lat: number; lon: number }): P
   return hours.map(scoreHour);
 }
 
-async function handleAppRoute(locale: Locale, path: string, url: URL): Promise<Response> {
+// Cloudflare resolves each request's approximate lat/lon (and city) from the client IP on request.cf - free, no extra request needed.
+function ipLocationFrom(request: Request): { lat: number; lon: number; name: string | null } | null {
+  const cf = request.cf as IncomingRequestCfProperties | undefined;
+  const lat = Number(cf?.latitude);
+  const lon = Number(cf?.longitude);
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
+  return { lat, lon, name: cf?.city ?? null };
+}
+
+// Not itself an entrypoint - called from fetch() below (the Worker's actual entrypoint) for every localized route.
+async function handleAppRoute(
+  locale: Locale,
+  path: string,
+  url: URL,
+  ipLocation: { lat: number; lon: number; name: string | null } | null
+): Promise<Response> {
   const currentPath = path;
   const search = url.search;
 
   if (path === "/") {
-    return html(renderLandingPage({ locale, currentPath, search }));
+    return html(renderLandingPage({ locale, currentPath, search, ipLocation }));
   }
 
   if (path === "/conditions") {
@@ -105,7 +120,7 @@ export default {
 
     const parsed = parseLocalizedPath(path);
     if (parsed) {
-      return handleAppRoute(parsed.locale, parsed.path, url);
+      return handleAppRoute(parsed.locale, parsed.path, url, ipLocationFrom(request));
     }
 
     return env.ASSETS.fetch(request);
