@@ -11,6 +11,7 @@ open http://127.0.0.1:8787/compare.html
 
 - `compare.html` - the live site and both variations side by side in iframes, with a phone/tablet/desktop width switcher.
 - `a-ribbon.html` - Variation A. Hours on the x axis, one ribbon per day stacked vertically; wind area chart with tier-threshold guide lines; scrub/tap lens for detail; inline location switcher under the title; saved spots as chips.
+- `a-ribbon-map.html` - Variation A plus the map thumbnail and pinpoint panel (step 2, see `docs/plans/ribbon-map.md`). Identical to `a-ribbon.html` otherwise.
 - `b-stream.html` - Variation B. One continuous vertical time axis across all days (night collapsed), every hour's data inline as horizontal wind bars; sticky day headers; spot rail (desktop) / chip strip (mobile) with live glance badges.
 - `core.js` - shared module: the scoring model ported 1:1 from `src/`, forecast/geocode fetches, window detection, saved-spot store, day summaries.
 - `tokens.css` - shared design tokens (light/dark).
