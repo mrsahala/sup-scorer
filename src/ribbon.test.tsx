@@ -78,6 +78,19 @@ describe("Ribbon geometry", () => {
     assert.ok(!b.includes("area-2026-09-20"));
   });
 
+  test("the wipe clip id is unique per date and wraps the curves and tints", () => {
+    const a = render(<Ribbon locale="en" day="2026-09-20" hours={mixedDay} sel={0} />);
+    const b = render(<Ribbon locale="en" day="2026-09-21" hours={makeDay("2026-09-21", MIXED)} sel={0} />);
+    assert.ok(a.includes('id="wipe-2026-09-20"'));
+    assert.ok(a.includes('class="wipe" clip-path="url(#wipe-2026-09-20)"'));
+    assert.ok(b.includes('id="wipe-2026-09-21"'));
+    assert.ok(!b.includes("wipe-2026-09-20"));
+    // wind-line and tier columns sit inside the wiped group, not before it.
+    const wiped = /<g class="wipe"[^>]*>([\s\S]*?)<\/svg>/.exec(a)?.[1] ?? "";
+    assert.ok(wiped.includes('class="wind-line"'));
+    assert.ok(wiped.includes('class="tier-col'));
+  });
+
   test("no NaN, Infinity or undefined anywhere in the output", () => {
     for (const hours of [mixedDay, makeDay(TODAY, [13]), makeDay(TODAY, [0, 80, 0])]) {
       const html = render(<Ribbon locale="en" day={TODAY} hours={hours} sel={0} />);

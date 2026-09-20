@@ -71,6 +71,8 @@
 html { -webkit-text-size-adjust: 100%; }
 body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--font); font-feature-settings: "tnum" 1, "cv11" 1; line-height: 1.4; }
 button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+/* Box-shadow, not outline, so the ring follows each button's own border-radius. */
+button:focus-visible { box-shadow: 0 0 0 2px var(--accent); }
 .mono { font-family: var(--mono); }
 
 .tier-great { --tier: var(--great); }
@@ -81,6 +83,18 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+  /* Presentation attributes lose to any CSS rule, so this drops the clip reference
+     outright - the SMIL wipe becomes invisible whether or not it keeps ticking. */
+  .chart .curves .wipe { clip-path: none; }
+  .days { animation: none; }
+  ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }
+}
+
+/* Cross-document view transitions: progressive, no-op where unsupported. Naming
+   .hdr/.title-block pulls them out of the default root crossfade so only the
+   days/chips swap; header and title stay put across a spot switch. */
+@view-transition {
+  navigation: auto;
 }
 
 /* ---------- header ---------- */
@@ -89,6 +103,7 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
   padding: 10px 16px; background: color-mix(in srgb, var(--bg) 78%, transparent);
   backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
   border-bottom: 1px solid color-mix(in srgb, var(--line) 60%, transparent);
+  view-transition-name: hdr;
 }
 .hdr-in { width: 100%; max-width: 760px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; }
 .wordmark { color: inherit; text-decoration: none; font-weight: 800; letter-spacing: -0.02em; font-size: 15px; display: inline-flex; align-items: center; gap: 7px; }
@@ -119,7 +134,7 @@ h2 { font-size: 1.1rem; margin: 24px 0 8px; }
 .credit p { color: var(--muted); line-height: 1.5; margin: 0; }
 
 /* ---------- title block ---------- */
-.title-block { position: relative; }
+.title-block { position: relative; view-transition-name: title-block; }
 .title-row { display: flex; align-items: flex-start; gap: 10px; }
 .spot-btn { display: inline-flex; align-items: center; gap: 8px; text-align: left; font-size: 28px; font-weight: 700; letter-spacing: -0.025em; line-height: 1.15;
   border-radius: 10px; padding: 2px 6px 2px 0; min-width: 0; transition: color 160ms var(--ease); }
@@ -184,7 +199,7 @@ h2 { font-size: 1.1rem; margin: 24px 0 8px; }
 .chip:active { transform: scale(0.97); }
 
 /* ---------- days / cards ---------- */
-.days { margin-top: 22px; display: grid; gap: 14px; transition: opacity 120ms var(--ease), transform 220ms var(--ease); }
+.days { margin-top: 22px; display: grid; gap: 14px; transition: opacity 120ms var(--ease), transform 220ms var(--ease); animation: enter 260ms var(--ease) both; }
 .days.leaving { opacity: 0; transform: translateY(-4px); }
 .days.entering { animation: enter 260ms var(--ease) both; }
 @keyframes enter { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
@@ -246,8 +261,10 @@ h2 { font-size: 1.1rem; margin: 24px 0 8px; }
 }
 @media (max-width: 559px) {
   .guide-labels span {
-    left: 4px; margin-left: 0; font-size: 9px; opacity: 0.9;
-    background: color-mix(in srgb, var(--bg-2) 80%, transparent); padding: 0 3px; border-radius: 3px;
+    left: 4px; margin-left: 0; font-size: 9px; opacity: 0.7;
+    /* Halo, not a box: ported from the prototype's SVG paint-order:stroke trick - HTML
+       text can't stroke, so a stack of same-color blurred shadows fakes an opaque one. */
+    text-shadow: 0 0 2px var(--bg-2), 0 0 2px var(--bg-2), 0 0 2px var(--bg-2), 0 0 2px var(--bg-2);
   }
 }
 
