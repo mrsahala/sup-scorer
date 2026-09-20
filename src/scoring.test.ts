@@ -8,6 +8,7 @@ function row(overrides: Partial<HourRow> = {}): HourRow {
     time: "2026-08-27T10:00",
     date: "2026-08-27",
     hour: "10:00",
+    hourNum: 10,
     tempC: 20,
     windKmh: 10,
     gustKmh: 10,
@@ -149,5 +150,38 @@ describe("scoreHour - warm flag (independent of tier)", () => {
 describe("TIER_NAMES", () => {
   test("is ordered best to worst, ending in avoid", () => {
     assert.deepEqual(TIER_NAMES, ["great", "good", "marginal", "poor", "avoid"]);
+  });
+});
+
+describe("scoreHour - tierIndex", () => {
+  test("matches TIER_NAMES.indexOf(tier), including after a gust downgrade", () => {
+    const r = scoreHour(row({ windKmh: 8, gustKmh: 34 })); // great -> marginal (2-step downgrade)
+    assert.equal(r.tier, "marginal");
+    assert.equal(r.tierIndex, TIER_NAMES.indexOf("marginal"));
+  });
+});
+
+describe("scoreHour - coldLimited", () => {
+  test("true when tier qualifies on wind but temp is at/below TEMP_MIN_C", () => {
+    const r = scoreHour(row({ windKmh: 5, gustKmh: 5, tempC: 10, isDaylight: true }));
+    assert.equal(r.tier, "great");
+    assert.equal(r.qualifies, false); // temp gate fails
+    assert.equal(r.coldLimited, true);
+  });
+
+  test("false when warm enough, even at the same tier", () => {
+    const r = scoreHour(row({ windKmh: 5, gustKmh: 5, tempC: 10.1, isDaylight: true }));
+    assert.equal(r.coldLimited, false);
+  });
+
+  test("false outside daylight, regardless of temp", () => {
+    const r = scoreHour(row({ windKmh: 5, gustKmh: 5, tempC: 5, isDaylight: false }));
+    assert.equal(r.coldLimited, false);
+  });
+
+  test("false when the tier itself is worse than marginal, even if cold", () => {
+    const r = scoreHour(row({ windKmh: 22, gustKmh: 22, tempC: 5, isDaylight: true }));
+    assert.equal(r.tier, "poor");
+    assert.equal(r.coldLimited, false);
   });
 });

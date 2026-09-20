@@ -11,6 +11,7 @@ export interface HourRow {
   time: string; // "YYYY-MM-DDTHH:MM", no timezone offset
   date: string; // "YYYY-MM-DD"
   hour: string; // "HH:MM"
+  hourNum: number; // 0-23, for window-contiguity checks in windows.ts
   tempC: number;
   windKmh: number;
   gustKmh: number;
@@ -126,6 +127,7 @@ export async function fetchForecast({
       time,
       date,
       hour: time.slice(11, 16),
+      hourNum: Number(time.slice(11, 13)),
       tempC: h.temperature_2m[i]!,
       windKmh: h.windspeed_10m[i]!,
       gustKmh: h.windgusts_10m[i]!,

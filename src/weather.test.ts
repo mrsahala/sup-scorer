@@ -44,6 +44,10 @@ describe("fetchForecast", () => {
       hours.map((h) => h.hour),
       ["05:00", "06:00", "12:00", "20:00", "21:00"]
     );
+    assert.deepEqual(
+      hours.map((h) => h.hourNum),
+      [5, 6, 12, 20, 21]
+    );
     assert.equal(hours[2]!.date, "2026-08-27");
     assert.equal(hours[2]!.tempC, 22);
     assert.equal(hours[2]!.windKmh, 12);

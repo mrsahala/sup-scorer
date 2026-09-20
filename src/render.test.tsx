@@ -29,6 +29,7 @@ describe("renderSpotPage", () => {
     time: "2026-08-27T10:00",
     date: "2026-08-27",
     hour: "10:00",
+    hourNum: 10,
     tempC: 18,
     windKmh: 10,
     gustKmh: 15,
@@ -37,11 +38,13 @@ describe("renderSpotPage", () => {
     isDaylight: true,
     qualifies: true,
     tier: "great",
+    tierIndex: 0,
     baseTier: "great",
     warm: true,
     gustDowngraded: false,
     gustDelta: 5,
     gustRatio: 1.5,
+    coldLimited: false,
   };
 
   test("renders a doctype and the hour's tier label", () => {

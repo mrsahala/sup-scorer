@@ -28,11 +28,13 @@ import type { HourRow } from "./weather";
 export interface ScoredHour extends HourRow {
   qualifies: boolean; // daylight + tier at/better than WORST_QUALIFYING_TIER + warm enough
   tier: Tier; // final tier, after any gust downgrade
+  tierIndex: number; // TIER_NAMES.indexOf(tier) - windows.ts's best/worst/mode math
   baseTier: Tier; // tier from sustained wind alone, before gust adjustment
   warm: boolean; // tempC > TEMP_BETTER_C - informational, doesn't affect qualifies
   gustDowngraded: boolean; // true when tier !== baseTier (gust made it worse)
   gustDelta: number; // gustKmh - windKmh, rounded for display
   gustRatio: number; // gustKmh / windKmh, rounded for display
+  coldLimited: boolean; // tier alone would qualify, but temp is too low - the UI's "too cold" reason
 }
 
 // Tier order best -> worst: WIND_TIERS' names plus "avoid" appended.
@@ -92,15 +94,18 @@ export function scoreHour(row: HourRow): ScoredHour {
   const qualifies = row.isDaylight && tierIndex <= WORST_QUALIFYING_INDEX && row.tempC > TEMP_MIN_C;
   const warm = row.tempC > TEMP_BETTER_C;
   const gustDowngraded = tier !== baseTier;
+  const coldLimited = row.isDaylight && tierIndex <= WORST_QUALIFYING_INDEX && row.tempC <= TEMP_MIN_C;
 
   return {
     ...row,
     qualifies,
     tier,
+    tierIndex,
     baseTier,
     warm,
     gustDowngraded,
     gustDelta: Math.round(gustDelta * 10) / 10,
     gustRatio: Math.round(gustRatio * 100) / 100,
+    coldLimited,
   };
 }
