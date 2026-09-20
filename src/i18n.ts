@@ -40,6 +40,32 @@ export function dateLocale(locale: Locale): string {
   return DATE_LOCALE[locale] ?? DATE_LOCALE[DEFAULT_LOCALE];
 }
 
+// Parses a "YYYY-MM-DD" string as a UTC midnight Date - dates are already
+// day-bucketed in Europe/Amsterdam time by weather.ts, so no further
+// timezone conversion belongs here.
+function parseDateUTC(date: string): Date {
+  const [y, m, d] = date.split("-").map(Number);
+  return new Date(Date.UTC(y!, m! - 1, d!));
+}
+
+// Weekday abbreviation ("Mon", "ma", "Mo", ...) for a "YYYY-MM-DD" date.
+export function weekdayShort(locale: Locale, date: string): string {
+  return new Intl.DateTimeFormat(dateLocale(locale), { weekday: "short", timeZone: "UTC" }).format(
+    parseDateUTC(date),
+  );
+}
+
+// Today/Tomorrow/weekday label for a day card header. Both dates are
+// "YYYY-MM-DD" strings, compared as such - setUTCDate handles month/year
+// rollover for "tomorrow" so Dec 31 -> Jan 1 still resolves correctly.
+export function dayLabel(locale: Locale, date: string, today: string): string {
+  if (date === today) return t(locale, "today");
+  const tomorrow = parseDateUTC(today);
+  tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
+  if (date === tomorrow.toISOString().slice(0, 10)) return t(locale, "tomorrow");
+  return weekdayShort(locale, date);
+}
+
 // Display name for a locale, used by the language switcher.
 export function localeName(locale: Locale): string {
   return LOCALE_NAME[locale] ?? locale;

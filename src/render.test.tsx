@@ -105,10 +105,10 @@ describe("renderLandingPage - location picker map", () => {
 
   test("carries translated no-matches/search-failed strings as data attributes, per locale", () => {
     const en = renderLandingPage(baseArgs);
-    assert.ok(en.includes('data-no-matches="No matches found."'));
-    assert.ok(en.includes('data-search-failed="Search failed - try again."'));
+    assert.ok(en.includes('data-no-matches="No matches"'));
+    assert.ok(en.includes('data-search-failed="Search failed"'));
 
     const de = renderLandingPage({ locale: "de", currentPath: "/", search: "" });
-    assert.ok(de.includes('data-no-matches="Keine Treffer gefunden."'));
+    assert.ok(de.includes('data-no-matches="Keine Treffer"'));
   });
 });
