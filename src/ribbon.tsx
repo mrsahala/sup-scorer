@@ -235,9 +235,8 @@ export function Ribbon({
       <div class="chart">
         <svg class="curves" viewBox={`0 0 ${VB_W} ${VB_H}`} preserveAspectRatio="none" aria-hidden="true">
           <defs>
-            {/* Clips the curves+tints group from 0 to full width on load; width is the
-                clip's own attribute, not the group's, so reduced motion (below) can drop
-                the clip-path reference entirely without caring whether this still runs. */}
+            {/* Animating the clip's width, not the group's, lets CSS drop the
+                clip-path entirely for reduced motion. */}
             <clipPath id={wipeId}>
               <rect x="0" y="0" width={VB_W} height={VB_H}>
                 <animate

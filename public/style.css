@@ -83,16 +83,13 @@ button:focus-visible { box-shadow: 0 0 0 2px var(--accent); }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
-  /* Presentation attributes lose to any CSS rule, so this drops the clip reference
-     outright - the SMIL wipe becomes invisible whether or not it keeps ticking. */
+  /* Dropping the reference beats pausing SMIL - it can't run if nothing clips. */
   .chart .curves .wipe { clip-path: none; }
   .days { animation: none; }
   ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }
 }
 
-/* Cross-document view transitions: progressive, no-op where unsupported. Naming
-   .hdr/.title-block pulls them out of the default root crossfade so only the
-   days/chips swap; header and title stay put across a spot switch. */
+/* Naming .hdr/.title-block holds them still, so only the days crossfade. */
 @view-transition {
   navigation: auto;
 }
