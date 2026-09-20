@@ -385,6 +385,14 @@ with screenshots at 390 and 1100 in light and dark. Model: Opus. Size: L.
 If it grows past ~600 changed lines in `render.tsx` + `app.js`, split
 into PR6a (page, no script) and PR6b (script) on the same branch base.
 
+### Step 2 (after PR6; parallel with Wave 4)
+
+**PR9 — Map thumbnail and pinpoint panel.** Specified in full in
+`docs/plans/ribbon-map.md`, with its own prototype
+`prototypes/a-ribbon-map.html`. Restores the map as a thumbnail in the
+title row plus an expand-in-place pinpoint panel. Same rules and runbook
+as this plan.
+
 ### Wave 4 (after PR6; parallel)
 
 **PR7 — Motion and polish.** Branch `ribbon/polish`. SMIL wipe-in on the
@@ -446,7 +454,7 @@ human first.
 
 ## 8. Out of scope, and questions already answered
 
-- Map "fine-tune" picker: out. Revisit after launch.
+- Map "fine-tune" picker: not in this plan. It is step 2, `docs/plans/ribbon-map.md` (PR9), which starts after PR6 merges.
 - Client-side spot switching without navigation: out. Cross-document view transitions cover the feel.
 - Accounts or server-side saved spots: out. Cookies only.
 - Chip badges for more than 8 spots: out; the store caps at 8.
