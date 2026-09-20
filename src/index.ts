@@ -10,11 +10,11 @@
 import { fetchForecast } from "./weather";
 import { scoreHour, type ScoredHour } from "./scoring";
 import { LOCATION, type Tier } from "./config";
-import { renderSpotPage, renderAttributionPage } from "./render";
+import { renderConditionsPage, renderAttributionPage } from "./render";
 import { searchLocation, reverseGeocode } from "./geocode";
 import { t, parseLocalizedPath, weekdayShort, DEFAULT_LOCALE, LOCALES, type Locale } from "./i18n";
 import { groupByDate, glance } from "./windows";
-import { parseSdLast, serializeSdLast, isLocalhost } from "./cookies";
+import { parseSdLast, parseSdSpots, serializeSdLast, isLocalhost } from "./cookies";
 
 // The Worker's bindings, matching wrangler.jsonc's `assets` block. ASSETS
 // is what serves everything under public/ (see fetch()'s fallback below).
@@ -74,16 +74,26 @@ async function handleAppRoute(
 ): Promise<Response> {
   const currentPath = path;
   const search = url.search;
+  const cookieHeader = request.headers.get("Cookie");
+  const savedSpots = parseSdSpots(cookieHeader);
 
   if (path === "/") {
-    const spot = resolveStartingSpot(request.headers.get("Cookie"), ipLocation);
+    const spot = resolveStartingSpot(cookieHeader, ipLocation);
     const [scoredHours, resolvedName] = await Promise.all([
       computeScoredHours({ lat: spot.lat, lon: spot.lon }),
       spot.name ? Promise.resolve(spot.name) : reverseGeocode(spot.lat, spot.lon),
     ]);
     const name = resolvedName || t(locale, "myLocation");
     return html(
-      renderSpotPage({ locale, locationName: name, scoredHours, currentPath, search, switcherOpen: spot.switcherOpen })
+      renderConditionsPage({
+        locale,
+        spot: { name, lat: spot.lat, lon: spot.lon, gps: spot.gps },
+        scoredHours,
+        currentPath,
+        search,
+        switcherOpen: spot.switcherOpen,
+        savedSpots,
+      })
     );
   }
 
@@ -105,7 +115,14 @@ async function handleAppRoute(
     ]);
     const name = resolvedName || t(locale, "myLocation");
     const response = html(
-      renderSpotPage({ locale, locationName: name, scoredHours, currentPath, search, switcherOpen: false })
+      renderConditionsPage({
+        locale,
+        spot: { name, lat, lon, gps },
+        scoredHours,
+        currentPath,
+        search,
+        savedSpots,
+      })
     );
     response.headers.append("Set-Cookie", serializeSdLast({ name, lat, lon, gps }, { secure: !isLocalhost(url) }));
     return response;

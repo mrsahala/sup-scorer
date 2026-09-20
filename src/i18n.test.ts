@@ -49,15 +49,15 @@ describe("t", () => {
   });
 
   test("nl and de have their own translation, not the English fallback", () => {
-    assert.notEqual(t("nl", "searchButton"), t("en", "searchButton"));
-    assert.notEqual(t("de", "searchButton"), t("en", "searchButton"));
+    assert.notEqual(t("nl", "searchPlaceholder"), t("en", "searchPlaceholder"));
+    assert.notEqual(t("de", "searchPlaceholder"), t("en", "searchPlaceholder"));
   });
 
   test("an unrecognized locale value falls back to the default locale's strings", () => {
     // Bypasses the Locale type on purpose - exercises the runtime fallback
     // for a value that (in real routing) parseLocalizedPath would already
     // have rejected, as defense in depth.
-    assert.equal(t("fr" as Locale, "searchButton"), t("en", "searchButton"));
+    assert.equal(t("fr" as Locale, "searchPlaceholder"), t("en", "searchPlaceholder"));
   });
 });
 

@@ -107,7 +107,7 @@ function tierLabel(locale: Locale, tier: Tier): string {
 
 // Splits a t() template on its {placeholders} so the values render as JSX
 // children (auto-escaped) instead of needing dangerouslySetInnerHTML.
-function interpolate(template: string, nodes: Record<string, ComponentChildren>): ComponentChildren[] {
+export function interpolate(template: string, nodes: Record<string, ComponentChildren>): ComponentChildren[] {
   return template.split(/(\{\w+\})/).map((part, i) => {
     const key = /^\{(\w+)\}$/.exec(part)?.[1];
     return key !== undefined && key in nodes ? <Fragment key={i}>{nodes[key]}</Fragment> : part;

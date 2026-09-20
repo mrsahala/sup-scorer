@@ -1,117 +1,226 @@
-// Mainly verifies the safety property that motivated switching to JSX:
-// dynamic values (location names, search queries, PDOK results) get
-// auto-escaped, with no manual escapeHtml() call required at each call
-// site. Also covers the one deliberate exception (dangerouslySetInnerHTML
-// on the attribution page) still doing what it's supposed to.
+// Covers the conditions page's assembled parts: the four subtitle states, the
+// switcher-open state, chips rendered from the sd_spots cookie, and the
+// #page-data blob's escaping. The ribbon itself is ribbon.test.tsx's.
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import { renderSpotPage, renderLandingPage, renderAttributionPage } from "./render";
-import type { ScoredHour } from "./scoring";
+import { renderConditionsPage, renderAttributionPage } from "./render";
+import { scoreHour, type ScoredHour } from "./scoring";
+import type { HourRow } from "./weather";
 
 const XSS = '<script>alert(1)</script>';
+const TODAY = "2026-09-20";
+const TOMORROW = "2026-09-21";
+// 09:35 Amsterdam on TODAY, so "today" and the now marker are deterministic.
+const NOW = new Date("2026-09-20T09:35:00+02:00");
 
-const baseArgs = { locale: "en" as const, currentPath: "/", search: "" };
+const baseArgs = {
+  locale: "en" as const,
+  spot: { name: "Loosdrecht", lat: 52.2, lon: 5.08, gps: false },
+  currentPath: "/",
+  search: "",
+  now: NOW,
+};
 
-// Checks for "&lt;script>", not "&lt;script&gt;" - Preact (like React) only
-// entity-escapes "<", "&", and quotes, not ">". A lone ">" in text content
-// can't open a tag, so leaving it literal is safe and standard - the check
-// here is specifically that "<" never survives unescaped.
-describe("XSS-shaped input is escaped, not executed", () => {
-  test("a spot's location name", () => {
-    const html = renderSpotPage({ ...baseArgs, locationName: XSS, scoredHours: [] });
-    assert.ok(!html.includes("<script>alert(1)</script>"));
-    assert.ok(html.includes("&lt;script>"));
-  });
-});
-
-describe("renderSpotPage", () => {
-  const hour: ScoredHour = {
-    time: "2026-08-27T10:00",
-    date: "2026-08-27",
-    hour: "10:00",
-    hourNum: 10,
+function row(date: string, hourNum: number, windKmh: number): HourRow {
+  return {
+    time: `${date}T${String(hourNum).padStart(2, "0")}:00`,
+    date,
+    hour: `${String(hourNum).padStart(2, "0")}:00`,
+    hourNum,
     tempC: 18,
-    windKmh: 10,
-    gustKmh: 15,
+    windKmh,
+    gustKmh: windKmh,
     windDirDeg: 225,
     weatherCode: 0,
     isDaylight: true,
-    qualifies: true,
-    tier: "great",
-    tierIndex: 0,
-    baseTier: "great",
-    warm: true,
-    gustDowngraded: false,
-    gustDelta: 5,
-    gustRatio: 1.5,
-    coldLimited: false,
   };
+}
 
-  test("renders a doctype and the hour's tier label", () => {
-    const html = renderSpotPage({ ...baseArgs, locationName: "Amsterdam", scoredHours: [hour] });
-    assert.ok(html.startsWith("<!doctype html>"));
-    assert.ok(html.includes("Great"));
-    assert.ok(html.includes("10:00"));
+// winds pick the tier: 8 great, 13 good, 18 marginal, 23 poor.
+const day = (date: string, winds: number[], startHour = 8): ScoredHour[] =>
+  winds.map((w, i) => scoreHour(row(date, startHour + i, w)));
+
+// The JSON the client script reads, unwrapped from its <script> element.
+function pageData(html: string): string {
+  const open = '<script type="application/json" id="page-data">';
+  const start = html.indexOf(open);
+  assert.notEqual(start, -1);
+  return html.slice(start + open.length, html.indexOf("</script>", start));
+}
+
+describe("subtitle", () => {
+  test("a best window today shows its full range and tier", () => {
+    const html = renderConditionsPage({ ...baseArgs, scoredHours: day(TODAY, [23, 23, 23, 13, 13, 13, 23, 23]) });
+    assert.ok(html.includes('class="sub tier-good"'));
+    assert.ok(html.includes("Best today"));
+    assert.ok(html.includes('<b class="mono">11:00–14:00</b>'));
   });
 
-  test("a non-daylight hour is dropped from the grid", () => {
-    const html = renderSpotPage({
+  test("every daylight hour qualifying shows the all-day wording", () => {
+    const html = renderConditionsPage({ ...baseArgs, scoredHours: day(TODAY, [13, 13, 13, 13, 13, 13]) });
+    assert.ok(html.includes('class="sub tier-good"'));
+    assert.ok(html.includes("all day today"));
+    assert.ok(html.includes("6h of daylight"));
+  });
+
+  test("no window today points at the next day that has one", () => {
+    const html = renderConditionsPage({
       ...baseArgs,
-      locationName: "Amsterdam",
-      scoredHours: [{ ...hour, isDaylight: false }],
+      scoredHours: [...day(TODAY, [23, 23, 23]), ...day(TOMORROW, [23, 13, 13])],
     });
-    assert.ok(!html.includes("10:00"));
+    assert.ok(html.includes('class="sub"'));
+    assert.ok(html.includes("No good window today"));
+    assert.ok(html.includes("<b>Tomorrow</b>"));
+    assert.ok(html.includes('<b class="mono">09:00</b>'));
   });
 
-  test("no qualifying hours shows the empty state", () => {
-    const html = renderSpotPage({ ...baseArgs, locationName: "Amsterdam", scoredHours: [] });
+  test("no window anywhere in the lookahead counts the days", () => {
+    const html = renderConditionsPage({
+      ...baseArgs,
+      scoredHours: [...day(TODAY, [23, 23, 23]), ...day(TOMORROW, [23, 23, 23])],
+    });
+    assert.ok(html.includes("No good window in the next 2 days"));
+  });
+});
+
+describe("switcher", () => {
+  const scoredHours = day(TODAY, [13, 13, 13]);
+
+  test("is closed by default", () => {
+    const html = renderConditionsPage({ ...baseArgs, scoredHours });
+    assert.ok(html.includes('data-open="false"'));
+    assert.ok(html.includes('aria-expanded="false"'));
+    assert.ok(!html.includes("Pick a spot to get started"));
+  });
+
+  test("switcherOpen renders it open, with the hint", () => {
+    const html = renderConditionsPage({ ...baseArgs, scoredHours, switcherOpen: true });
+    assert.ok(html.includes('data-open="true"'));
+    assert.ok(html.includes('aria-expanded="true"'));
+    assert.ok(html.includes("Pick a spot to get started"));
+  });
+});
+
+describe("saved spots", () => {
+  const scoredHours = day(TODAY, [13, 13, 13]);
+  const savedSpots = [
+    { name: "Loosdrecht", lat: 52.2, lon: 5.08 },
+    { name: "Kralingse Plas, Rotterdam", lat: 51.94, lon: 4.51 },
+  ];
+
+  test("render as chips, the current spot marked active, badges left to app.js", () => {
+    const html = renderConditionsPage({ ...baseArgs, scoredHours, savedSpots });
+    assert.ok(html.includes('<a class="chip active" href="/en/conditions?lat=52.2&amp;lon=5.08&amp;name=Loosdrecht"'));
+    assert.ok(html.includes('data-lat="51.94" data-lon="4.51"'));
+    assert.ok(html.includes("<span>Kralingse Plas</span><small></small>"));
+  });
+
+  test("also fill the switcher's saved list, and the star reads as pressed", () => {
+    const html = renderConditionsPage({ ...baseArgs, scoredHours, savedSpots });
+    assert.ok(html.includes('aria-pressed="true" aria-label="Remove from saved spots"'));
+    assert.ok(html.includes('<span class="nm">Kralingse Plas, Rotterdam</span>'));
+    assert.ok(!html.includes('id="saved-h" hidden'));
+  });
+
+  test("no cookie means no chips and an unpressed star", () => {
+    const html = renderConditionsPage({ ...baseArgs, scoredHours });
+    assert.ok(html.includes('<div class="chips" id="chips"></div>'));
+    assert.ok(html.includes('aria-pressed="false" aria-label="Save this spot"'));
+  });
+});
+
+describe("#page-data", () => {
+  const scoredHours = day(TODAY, [23, 13, 13]);
+
+  test("carries the spot, the selection, and the strings app.js needs", () => {
+    const html = renderConditionsPage({ ...baseArgs, scoredHours });
+    const data = JSON.parse(pageData(html));
+    assert.equal(data.locale, "en");
+    assert.deepEqual(data.spot, { name: "Loosdrecht", lat: 52.2, lon: 5.08, gps: false, saved: false });
+    assert.equal(data.days.length, 1);
+    assert.equal(data.days[0].date, TODAY);
+    assert.equal(data.days[0].hours.length, 3);
+    assert.equal(data.strings.tiers.great, "Great");
+    assert.equal(data.strings.compass[0], "N");
+  });
+
+  test("the rendered selection matches the blob's", () => {
+    const html = renderConditionsPage({ ...baseArgs, scoredHours });
+    const data = JSON.parse(pageData(html));
+    assert.ok(html.includes(`data-sel="${data.days[0].sel}"`));
+  });
+
+  test("a locale change translates the strings", () => {
+    const html = renderConditionsPage({ ...baseArgs, locale: "nl", scoredHours });
+    assert.equal(JSON.parse(pageData(html)).strings.tiers.great, "Geweldig");
+  });
+});
+
+// Preact only entity-escapes "<", "&" and quotes, not ">" - a lone ">" in text
+// can't open a tag. The check is that "<" never survives unescaped anywhere,
+// including inside the JSON blob, which JSX does not escape for us.
+describe("XSS-shaped input is escaped, not executed", () => {
+  const scoredHours = day(TODAY, [13, 13, 13]);
+  const spot = { name: XSS, lat: 52.2, lon: 5.08, gps: false };
+
+  test("a spot name in the page body", () => {
+    const html = renderConditionsPage({ ...baseArgs, spot, scoredHours });
+    assert.ok(!html.includes("<script>alert(1)</script>"));
+    assert.ok(html.includes("&lt;script>"));
+  });
+
+  test("a spot name in the page-data blob", () => {
+    const html = renderConditionsPage({ ...baseArgs, spot, scoredHours });
+    const blob = pageData(html);
+    assert.ok(!blob.includes("<"));
+    assert.ok(blob.includes("\\u003cscript>"));
+    assert.equal(JSON.parse(blob).spot.name, XSS);
+  });
+
+  test("a saved spot's name in the page-data blob", () => {
+    const html = renderConditionsPage({
+      ...baseArgs,
+      scoredHours,
+      savedSpots: [{ name: XSS, lat: 51.9, lon: 4.5 }],
+    });
+    const blob = pageData(html);
+    assert.ok(!blob.includes("<"));
+    assert.ok(!html.includes("<script>alert(1)</script>"));
+  });
+});
+
+describe("renderConditionsPage", () => {
+  test("renders a doctype and the ribbon contract's markup", () => {
+    const html = renderConditionsPage({ ...baseArgs, scoredHours: day(TODAY, [13, 13, 13]) });
+    assert.ok(html.startsWith("<!doctype html>"));
+    assert.ok(html.includes('<div class="ribbon"'));
+    assert.ok(html.includes('data-n="3"'));
+  });
+
+  test("the now marker renders on today only", () => {
+    const html = renderConditionsPage({
+      ...baseArgs,
+      scoredHours: [...day(TODAY, [13, 13, 13]), ...day(TOMORROW, [13, 13, 13])],
+    });
+    assert.equal(html.match(/class="now"/g)?.length, 1);
+    assert.ok(html.includes('data-now="1.58"'));
+  });
+
+  test("no daylight hours shows the empty state", () => {
+    const html = renderConditionsPage({ ...baseArgs, scoredHours: [] });
     assert.ok(html.includes("No forecast data available."));
   });
 });
 
 describe("renderAttributionPage", () => {
   test("still renders its trusted links as real anchor tags, not escaped text", () => {
-    const html = renderAttributionPage(baseArgs);
+    const html = renderAttributionPage({ locale: "en", currentPath: "/attribution", search: "" });
     assert.ok(html.includes('<a href="https://open-meteo.com/"'));
     assert.ok(!html.includes("&lt;a href"));
   });
-});
 
-describe("renderLandingPage - use my location button", () => {
-  test("carries the locale and translated strings as data attributes, per locale", () => {
-    const en = renderLandingPage(baseArgs);
-    assert.ok(en.includes('id="use-location"'));
-    assert.ok(en.includes('data-locale="en"'));
-    assert.ok(en.includes("Use my location"));
-
-    const nl = renderLandingPage({ locale: "nl", currentPath: "/", search: "" });
-    assert.ok(nl.includes('data-locale="nl"'));
-    assert.ok(nl.includes("Gebruik mijn locatie"));
-  });
-
-  test("the geolocation script is present and untouched by escaping", () => {
-    const html = renderLandingPage(baseArgs);
-    assert.ok(html.includes("navigator.geolocation"));
-    assert.ok(html.includes("getCurrentPosition"));
-  });
-});
-
-describe("renderLandingPage - location picker map", () => {
-  test("includes the map container, Leaflet, and both API endpoints", () => {
-    const html = renderLandingPage(baseArgs);
-    assert.ok(html.includes('id="picker-map"'));
-    assert.ok(html.includes('id="picker-panel"'));
-    assert.ok(html.includes("leaflet"));
-    assert.ok(html.includes("/api/search"));
-    assert.ok(html.includes("/api/reverse"));
-  });
-
-  test("carries translated no-matches/search-failed strings as data attributes, per locale", () => {
-    const en = renderLandingPage(baseArgs);
-    assert.ok(en.includes('data-no-matches="No matches"'));
-    assert.ok(en.includes('data-search-failed="Search failed"'));
-
-    const de = renderLandingPage({ locale: "de", currentPath: "/", search: "" });
-    assert.ok(de.includes('data-no-matches="Keine Treffer"'));
+  test("carries no page-data blob", () => {
+    const html = renderAttributionPage({ locale: "en", currentPath: "/attribution", search: "" });
+    assert.ok(!html.includes("page-data"));
   });
 });
