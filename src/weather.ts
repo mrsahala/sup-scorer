@@ -84,6 +84,12 @@ export class OpenMeteoError extends Error {
   }
 }
 
+// Rounds to 3 decimal places (~110m) so nearby requests share Open-Meteo's
+// edge cache instead of missing on float noise.
+function round3(n: number): number {
+  return Math.round(n * 1000) / 1000;
+}
+
 // Fetches and maps one location's hourly forecast.
 export async function fetchForecast({
   lat = LOCATION.lat,
@@ -92,8 +98,8 @@ export async function fetchForecast({
   days = LOOKAHEAD_DAYS,
 }: FetchForecastOptions = {}): Promise<ForecastResult> {
   const url = new URL("https://api.open-meteo.com/v1/forecast");
-  url.searchParams.set("latitude", String(lat));
-  url.searchParams.set("longitude", String(lon));
+  url.searchParams.set("latitude", String(round3(lat)));
+  url.searchParams.set("longitude", String(round3(lon)));
   url.searchParams.set("hourly", "temperature_2m,windspeed_10m,windgusts_10m,winddirection_10m,weathercode");
   url.searchParams.set("daily", "sunrise,sunset");
   url.searchParams.set("timezone", timezone);
@@ -101,7 +107,9 @@ export async function fetchForecast({
   url.searchParams.set("wind_speed_unit", "kmh");
   url.searchParams.set("temperature_unit", "celsius");
 
-  const resp = await fetch(url);
+  // cacheEverything + a 10 min TTL: repeat and nearby requests (chip glance
+  // fetches especially) are served from Cloudflare's edge, not Open-Meteo.
+  const resp = await fetch(url, { cf: { cacheTtl: 600, cacheEverything: true } });
   if (!resp.ok) {
     throw new OpenMeteoError(resp.status, await resp.text());
   }
