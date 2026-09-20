@@ -179,8 +179,18 @@ const PIN_ICON_SVG =
 
 // Search-then-pinpoint location picker: the search box flies a Leaflet map
 // (PDOK tiles) to a result, then the visitor drags/taps the pin to the
-// exact spot before confirming.
-function LocationPicker({ locale }: { locale: Locale }): JSX.Element {
+// exact spot before confirming. When ipLocation is available (Cloudflare's
+// request.cf geolocation, see index.ts's ipLocationFrom), the map opens
+// centered there with the pin already dropped, instead of the whole
+// country - a starting guess that may be good enough on its own, with the
+// GPS button and search still there for anyone who wants precision.
+function LocationPicker({
+  locale,
+  ipLocation = null,
+}: {
+  locale: Locale;
+  ipLocation?: { lat: number; lon: number; name: string | null } | null;
+}): JSX.Element {
   return (
     <div class="picker">
       <div class="search-wrap">
@@ -201,6 +211,9 @@ function LocationPicker({ locale }: { locale: Locale }): JSX.Element {
         data-locale={locale}
         data-no-matches={t(locale, "noSearchResults")}
         data-search-failed={t(locale, "searchFailed")}
+        data-ip-lat={ipLocation ? String(ipLocation.lat) : undefined}
+        data-ip-lon={ipLocation ? String(ipLocation.lon) : undefined}
+        data-ip-name={ipLocation?.name ?? undefined}
       ></div>
       <div class="picker-panel" id="picker-panel" hidden>
         <div class="label">{t(locale, "pickedSpot")}</div>
@@ -217,8 +230,14 @@ function LocationPicker({ locale }: { locale: Locale }): JSX.Element {
 (function () {
   var mapEl = document.getElementById("picker-map");
   var locale = mapEl.dataset.locale;
+  var ipLat = mapEl.dataset.ipLat ? Number(mapEl.dataset.ipLat) : null;
+  var ipLon = mapEl.dataset.ipLon ? Number(mapEl.dataset.ipLon) : null;
+  var hasIpLocation = ipLat !== null && ipLon !== null;
 
-  var map = L.map(mapEl).setView(${JSON.stringify(DEFAULT_START_LOCATION)}, 7);
+  var map = L.map(mapEl).setView(
+    hasIpLocation ? [ipLat, ipLon] : ${JSON.stringify(DEFAULT_START_LOCATION)},
+    hasIpLocation ? 12 : 7
+  );
   L.tileLayer("https://service.pdok.nl/brt/achtergrondkaart/wmts/v2_0/standaard/EPSG:3857/{z}/{x}/{y}.png", {
     attribution: "&copy; PDOK / Kadaster",
     maxZoom: 19
@@ -255,6 +274,11 @@ function LocationPicker({ locale }: { locale: Locale }): JSX.Element {
   }
 
   map.on("click", function (e) { selectPoint(e.latlng.lat, e.latlng.lng, null); });
+
+  // Pre-select the IP-guessed spot so the panel/link are ready immediately -
+  // a starting guess, not a confirmed pick, so it's still just a normal
+  // draggable pin the visitor can correct via search, drag, or GPS.
+  if (hasIpLocation) selectPoint(ipLat, ipLon, mapEl.dataset.ipName || null);
 
   var form = document.getElementById("picker-search-form");
   var input = document.getElementById("picker-search-input");
@@ -458,10 +482,12 @@ export function renderLandingPage({
   locale,
   currentPath,
   search,
+  ipLocation = null,
 }: {
   locale: Locale;
   currentPath: string;
   search: string;
+  ipLocation?: { lat: number; lon: number; name: string | null } | null;
 }): string {
   return (
     DOCTYPE +
@@ -469,7 +495,7 @@ export function renderLandingPage({
       <Layout title={t(locale, "siteTitleLanding")} locale={locale} currentPath={currentPath} search={search}>
         <p class="subtitle">{t(locale, "subtitleLanding")}</p>
         <GeoLocationButton locale={locale} />
-        <LocationPicker locale={locale} />
+        <LocationPicker locale={locale} ipLocation={ipLocation} />
       </Layout>
     )
   );
