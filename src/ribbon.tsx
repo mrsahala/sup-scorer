@@ -262,7 +262,7 @@ export function Ribbon({
         <div class="guide-labels">
           {THRESHOLDS.map(([tier, kmh]) => (
             <span key={kmh} class={`tier-${tier}`} style={`--y:${yPct(kmh)}`}>
-              {t(locale, "guideLabel", { tier: tierLabel(locale, tier).toLowerCase(), kmh: String(kmh) })}
+              {t(locale, "guideLabel", { tier: tierLabel(locale, tier), kmh: String(kmh) })}
             </span>
           ))}
         </div>
@@ -308,7 +308,7 @@ export function DetailStrip({ locale, hour }: { locale: Locale; hour: ScoredHour
         <span class="mono">
           {r1(finite(hour.windKmh))} → {r1(finite(hour.gustKmh))}
         </span>{" "}
-        km/h
+        {t(locale, "unitKmh")}
       </span>
       <span class="it">
         <span class="mono">{r1(finite(hour.tempC))}°C</span>
