@@ -1,4 +1,7 @@
-// sd_last/sd_spots cookie parsing and serialization. Parsing never throws on a hostile cookie - it's just "no cookie".
+// Reads and writes this site's two cookies. "sd" is short for supdawg.
+//
+// Parsing never throws on a hostile cookie - a malformed one is just
+// treated as "no cookie".
 const SD_LAST = "sd_last";
 const SD_SPOTS = "sd_spots";
 const MAX_SPOTS = 8;
