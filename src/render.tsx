@@ -412,6 +412,7 @@ function Layout({
         {pageData === undefined ? null : (
           <script type="application/json" id="page-data" dangerouslySetInnerHTML={{ __html: pageData }} />
         )}
+        <script type="module" src="/app.js" />
       </body>
     </html>
   );
