@@ -174,6 +174,11 @@ function wireRibbons(page) {
 
 // ---------- switcher ----------
 
+// Only one of the switcher and the map panel may be open at a time; each
+// wire function assigns its own close fn here so the other can call it
+// without the two needing to know about each other directly.
+const panels = { closeSwitcher: () => {}, closeMap: () => {} };
+
 function pinIcon() {
   const svg = document.createElementNS(SVG_NS, "svg");
   svg.setAttribute("class", "ic");
@@ -266,7 +271,8 @@ function wireSwitcher(page) {
     }
   };
 
-  btn.addEventListener("click", () => (tb.dataset.open === "true" ? close() : open()));
+  panels.closeSwitcher = close;
+  btn.addEventListener("click", () => (tb.dataset.open === "true" ? close() : (panels.closeMap(), open())));
   document.addEventListener("pointerdown", (e) => {
     if (tb.dataset.open !== "true") return;
     if (e.target instanceof Element && e.target.closest("#title-block")) return;
@@ -307,6 +313,126 @@ function wireSwitcher(page) {
       if (row) window.location.assign(row.href);
     }
   });
+}
+
+// ---------- map thumbnail + pinpoint panel ----------
+
+const LEAFLET_ZOOM = 14;
+const MAP_OPEN_DELAY_MS = 240; // 20ms after .map-panel's 220ms grid-rows expand finishes (style.css)
+const LEAFLET_CSS = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
+const LEAFLET_JS = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
+const TILE_URL = (z, x, y) => `https://service.pdok.nl/brt/achtergrondkaart/wmts/v2_0/standaard/EPSG:3857/${z}/${x}/${y}.png`;
+const PIN_SVG =
+  '<svg width="26" height="26" viewBox="0 0 26 26" xmlns="http://www.w3.org/2000/svg"><path d="M13 2C8.6 2 5 5.5 5 9.8c0 6 8 14 8 14s8-8 8-14C21 5.5 17.4 2 13 2z" fill="#e0693f" stroke="#fff" stroke-width="1.5"/><circle cx="13" cy="9.8" r="3.2" fill="#fff"/></svg>';
+
+function wireMapPanel(page) {
+  const tb = document.getElementById("title-block");
+  const btn = document.getElementById("map-thumb");
+  const mapEl = document.getElementById("map");
+  const hint = document.getElementById("map-hint");
+  const nameEl = document.getElementById("map-name");
+  const go = document.getElementById("map-go");
+  if (!tb || !btn || !mapEl || !hint || !nameEl || !go) return;
+
+  let leafletReady = null;
+  let map = null;
+  let marker = null;
+  let pending = null;
+
+  // Leaflet is only fetched the first time the panel opens.
+  function loadLeaflet() {
+    if (leafletReady) return leafletReady;
+    leafletReady = new Promise((resolve, reject) => {
+      const css = document.createElement("link");
+      css.rel = "stylesheet";
+      css.href = LEAFLET_CSS;
+      const script = document.createElement("script");
+      script.src = LEAFLET_JS;
+      script.onload = resolve;
+      script.onerror = reject;
+      document.head.append(css, script);
+    });
+    return leafletReady;
+  }
+
+  async function propose(lat, lon) {
+    pending = { lat, lon };
+    hint.hidden = true;
+    nameEl.textContent = "…";
+    let name = page.strings.pickedPoint;
+    try {
+      const resp = await fetch(`/api/reverse?lat=${lat}&lon=${lon}`);
+      const body = resp.ok ? await resp.json() : null;
+      if (body && typeof body.name === "string" && body.name) name = body.name;
+    } catch {
+      // keep the fallback name
+    }
+    if (!pending || pending.lat !== lat || pending.lon !== lon) return; // a newer pick landed first
+    nameEl.textContent = name;
+    go.href = conditionsUrl(page.locale, { name, lat, lon });
+    go.hidden = false;
+  }
+
+  async function openMap() {
+    panels.closeSwitcher();
+    tb.dataset.map = "true";
+    btn.setAttribute("aria-expanded", "true");
+    pending = null;
+    nameEl.textContent = "";
+    go.hidden = true;
+    hint.hidden = false;
+    try {
+      await loadLeaflet();
+    } catch {
+      leafletReady = null; // so the next tap retries instead of staying stuck
+      return;
+    }
+    if (tb.dataset.map !== "true") return; // closed again before Leaflet finished loading
+    const spot = page.spot;
+    if (!map) {
+      map = L.map(mapEl, { zoomControl: true, attributionControl: true }).setView([spot.lat, spot.lon], LEAFLET_ZOOM);
+      L.tileLayer(TILE_URL("{z}", "{x}", "{y}"), { attribution: "&copy; PDOK / Kadaster", maxZoom: 19 }).addTo(map);
+      marker = L.marker([spot.lat, spot.lon], {
+        icon: L.divIcon({ className: "picker-pin", html: PIN_SVG, iconSize: [26, 26], iconAnchor: [13, 24] }),
+        draggable: true,
+      }).addTo(map);
+      marker.on("dragend", () => {
+        const p = marker.getLatLng();
+        propose(p.lat, p.lng);
+      });
+      map.on("click", (e) => {
+        marker.setLatLng(e.latlng);
+        propose(e.latlng.lat, e.latlng.lng);
+      });
+    } else {
+      marker.setLatLng([spot.lat, spot.lon]);
+      map.setView([spot.lat, spot.lon], LEAFLET_ZOOM, { animate: false });
+    }
+    // The container grows from zero height during the expand animation.
+    setTimeout(() => map.invalidateSize(), MAP_OPEN_DELAY_MS);
+  }
+
+  function closeMap() {
+    tb.dataset.map = "false";
+    btn.setAttribute("aria-expanded", "false");
+  }
+
+  panels.closeMap = closeMap;
+  btn.addEventListener("click", () => (tb.dataset.map === "true" ? closeMap() : openMap()));
+  document.addEventListener("pointerdown", (e) => {
+    if (tb.dataset.map !== "true") return;
+    if (e.target instanceof Element && e.target.closest("#title-block")) return;
+    closeMap();
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && tb.dataset.map === "true") {
+      closeMap();
+      btn.focus();
+    }
+  });
+
+  // The GPS button landed here with the panel server-rendered already open.
+  if (tb.dataset.map === "true") openMap();
 }
 
 // ---------- GPS ----------
@@ -447,6 +573,7 @@ const page = readPageData();
 if (page) {
   wireRibbons(page);
   wireSwitcher(page);
+  wireMapPanel(page);
   wireGps(page);
   wireStar(page);
   wireChips(page);

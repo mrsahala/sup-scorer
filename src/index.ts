@@ -121,6 +121,9 @@ async function handleAppRoute(
         scoredHours,
         currentPath,
         search,
+        // Open the panel only for this fresh GPS navigation, not whenever a
+        // persisted gps-derived spot happens to be reloaded later.
+        mapOpen: gps,
         savedSpots,
       })
     );
