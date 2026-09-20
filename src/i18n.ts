@@ -7,8 +7,7 @@
 // happens. Always-prefix means every URL is permanent regardless of which
 // locale is "default"; only the bare "/" redirect target changes.
 //
-// Place names (spots.ts's Spot.name, PDOK search results) are deliberately
-// NOT translated - they're proper nouns, not UI copy.
+// Place names are deliberately NOT translated - proper nouns, not UI copy.
 export type Locale = "en" | "nl" | "de";
 export const LOCALES: Locale[] = ["en", "nl", "de"];
 export const DEFAULT_LOCALE: Locale = "en";
