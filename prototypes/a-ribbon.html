@@ -43,6 +43,9 @@
   .star[aria-pressed="true"] { color: var(--marginal); }
   .star[aria-pressed="true"] svg path { fill: currentColor; }
   .star.pop { transform: scale(1.25); }
+  .gps[aria-pressed="true"] { color: var(--accent); }
+  .gps.busy svg { animation: spin 1s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
   .sub { margin: 4px 0 0; color: var(--fg-2); font-size: 14px; min-height: 20px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
   .sub .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--tier, var(--muted)); flex: none; }
   .sub b { color: var(--fg); font-weight: 600; }
@@ -79,6 +82,9 @@
     transition: background 160ms var(--ease), color 160ms var(--ease), border-color 160ms var(--ease), transform 160ms var(--ease); max-width: 220px; }
   .chip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .chip i { width: 7px; height: 7px; border-radius: 50%; background: var(--tier, var(--muted)); flex: none; }
+  .chip small { font-family: var(--mono); font-size: 11px; font-weight: 500; color: var(--tier, var(--muted)); white-space: nowrap; }
+  .chip small:empty { display: none; }
+  .chip.active small { color: inherit; opacity: 0.75; }
   .chip:hover { border-color: color-mix(in srgb, var(--accent) 50%, var(--line)); color: var(--fg); }
   .chip.active { background: var(--fg); color: var(--bg); border-color: var(--fg); }
   .chip:active { transform: scale(0.97); }
@@ -108,7 +114,6 @@
   .ribbon .guide { stroke: var(--line); stroke-width: 1; stroke-dasharray: 2 3; }
   .ribbon .guide-l { font-family: var(--mono); font-size: 10px; fill: var(--tier); opacity: 0.85; }
   .ribbon .guide-l.in { font-size: 9px; opacity: 0.7; paint-order: stroke; stroke: var(--bg-2); stroke-width: 3px; stroke-linejoin: round; }
-  @media (max-width: 560px) { .lens { width: 168px; font-size: 11.5px; } }
   .ribbon .gust-band { fill: var(--fg); opacity: 0.07; }
   .ribbon .gust-line { fill: none; stroke: var(--fg-2); stroke-width: 1; stroke-dasharray: 3 3; opacity: 0.7; }
   .ribbon .wind-area { fill: url(#windGrad); }
@@ -123,34 +128,28 @@
   .ribbon .now-line { stroke: var(--accent); stroke-width: 1.5; }
   .ribbon .now-dot { fill: var(--accent); stroke: var(--bg-2); stroke-width: 2; }
   .ribbon .now-l { font-family: var(--mono); font-size: 10px; font-weight: 600; fill: var(--accent); text-anchor: middle; }
-  .ribbon .cursor { stroke: var(--fg); stroke-width: 1; opacity: 0; transition: opacity 120ms var(--ease); }
-  .ribbon .cursor-dot { fill: var(--bg-2); stroke: var(--fg); stroke-width: 2; opacity: 0; transition: opacity 120ms var(--ease); }
-  .ribbon .col-hi { fill: var(--fg); opacity: 0; transition: opacity 120ms var(--ease); }
-  .ribbon.hot .cursor, .ribbon.hot .cursor-dot { opacity: 1; }
-  .ribbon.hot .col-hi { opacity: 0.045; }
-  .ribbon.pinned .cursor { stroke: var(--accent); stroke-width: 1.5; }
-  .ribbon.pinned .cursor-dot { stroke: var(--accent); }
+  /* Selected-hour cursor: always visible, follows hover/drag, rests on the selection. */
+  .ribbon .cursor { stroke: var(--fg); stroke-width: 1.5; opacity: 0.55; }
+  .ribbon .cursor-dot { fill: var(--bg-2); stroke: var(--fg); stroke-width: 2; }
+  .ribbon .col-hi { fill: var(--fg); opacity: 0.05; }
+  .ribbon.dragging { cursor: ew-resize; }
+  .ribbon .key { font-family: var(--mono); font-size: 10px; fill: var(--muted); }
+  .ribbon .key-wind { stroke: var(--fg); stroke-width: 2.2; opacity: 0.85; }
+  .ribbon .key-gust { stroke: var(--fg-2); stroke-width: 1; stroke-dasharray: 3 3; opacity: 0.7; }
   .ribbon .hatch { fill: url(#hatch); }
 
-  .lens { position: absolute; top: 30px; left: 0; width: 180px; padding: 8px 10px 9px; border-radius: 10px; background: color-mix(in srgb, var(--bg-2) 92%, var(--fg) 8%);
-    border: 1px solid var(--line); box-shadow: var(--shadow); font-size: 12px; line-height: 1.35; pointer-events: none; opacity: 0; transform: translateY(4px);
-    transition: opacity 140ms var(--ease), transform 180ms var(--ease), left 90ms linear; z-index: 3; }
-  :root[data-theme="dark"] .lens, :root:not([data-theme="light"]) .lens { background: color-mix(in srgb, var(--bg-2) 86%, #000 14%); }
-  :root[data-theme="light"] .lens { background: #fff; }
-  .ribbon.hot .lens { opacity: 1; transform: none; }
-  .ribbon.pinned .lens { border-color: color-mix(in srgb, var(--accent) 55%, var(--line)); }
-  .lens-t { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 3px; }
-  .lens-t .tm { font-family: var(--mono); font-weight: 600; font-size: 13px; }
-  .lens-t .vd { font-weight: 700; color: var(--tier); font-size: 12px; letter-spacing: 0.01em; }
-  .lens-r { display: flex; align-items: center; gap: 6px; color: var(--fg-2); }
-  .lens-r .mono { color: var(--fg); font-weight: 500; }
-  .lens-r .ar { width: 12px; height: 12px; color: var(--fg-2); flex: none; }
-  .lens-f { margin-top: 4px; padding-top: 4px; border-top: 1px dashed var(--line); color: var(--muted); font-size: 11px; display: none; gap: 1px; }
-  .lens-f.has { display: grid; }
-  .lens-why:empty { display: none; }
-  .lens-pin { font-size: 9.5px; color: var(--accent); letter-spacing: 0.04em; font-weight: 600; display: none; }
-  .ribbon.pinned .lens-pin { display: block; }
-  .ribbon.pinned .lens-f { display: grid; }
+  /* Fixed detail strip under each chart. Never covers the curve, always in the same place. */
+  .detail { margin-top: 6px; padding: 8px 10px; border-radius: 9px; background: color-mix(in srgb, var(--tier, var(--muted)) 9%, transparent);
+    display: flex; align-items: center; flex-wrap: wrap; gap: 4px 14px; font-size: 13px; line-height: 1.3; min-height: 36px; transition: background 160ms var(--ease); }
+  .detail .tm { font-family: var(--mono); font-weight: 600; font-size: 14px; }
+  .detail .vd { font-weight: 700; color: var(--tier); }
+  .detail .it { display: inline-flex; align-items: center; gap: 5px; color: var(--fg-2); }
+  .detail .it .mono { color: var(--fg); font-weight: 500; }
+  .detail .it .ar { width: 12px; height: 12px; color: var(--fg-2); flex: none; }
+  .detail .why { color: var(--muted); font-size: 12px; }
+  .detail .why:empty { display: none; }
+  @media (max-width: 560px) { .detail { font-size: 12.5px; gap: 3px 10px; } .detail .why { flex-basis: 100%; } }
+
 
   /* ---------- skeleton / error ---------- */
   .skel { height: 262px; border-radius: var(--radius); border: 1px solid var(--line); background: linear-gradient(100deg, var(--bg-2) 30%, color-mix(in srgb, var(--bg-2) 70%, var(--fg) 6%) 50%, var(--bg-2) 70%);
@@ -160,8 +159,6 @@
   .err button { margin-left: 8px; padding: 6px 12px; border-radius: 8px; background: var(--fg); color: var(--bg); font-weight: 600; font-size: 13px; }
 
   footer { max-width: 760px; margin: 28px auto 0; padding: 0 16px; color: var(--muted); font-size: 11px; display: flex; gap: 6px; align-items: center; }
-  footer .legend { display: inline-flex; align-items: center; gap: 4px; margin-right: 8px; }
-  footer .legend i { width: 14px; height: 4px; border-radius: 2px; background: var(--tier); display: inline-block; }
 </style>
 </head>
 <body>
@@ -180,6 +177,9 @@
       <button class="star" id="star" aria-pressed="false" aria-label="Save this spot" hidden>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1.1 5.9L12 16.9l-5.3 2.8 1.1-5.9-4.3-4.1 5.9-.8z"/></svg>
       </button>
+      <button class="star gps" id="gps" aria-pressed="false" aria-label="Use my location" title="Use my location">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="10" cy="10" r="3"/><circle cx="10" cy="10" r="7"/><path d="M10 1v2M10 17v2M1 10h2M17 10h2"/></svg>
+      </button>
     </div>
     <p class="sub" id="sub"></p>
     <div class="switcher" id="switcher"><div>
@@ -190,12 +190,6 @@
         </div>
         <div class="list" id="results" role="listbox"></div>
         <div class="hint" id="hint" hidden></div>
-        <div class="list" id="gps-list">
-          <button class="row" id="gps">
-            <svg class="ic" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="10" cy="10" r="3"/><circle cx="10" cy="10" r="7"/><path d="M10 1v2M10 17v2M1 10h2M17 10h2"/></svg>
-            <span class="nm" id="gps-label">Use my location</span>
-          </button>
-        </div>
         <div id="saved-h" class="list-h" hidden>Saved spots</div>
         <div class="list" id="saved"></div>
       </div>
@@ -206,10 +200,7 @@
   <div class="days" id="days"></div>
 </main>
 
-<footer>
-  <span class="legend tier-great"><i></i>great</span><span class="legend tier-good"><i></i>good</span><span class="legend tier-marginal"><i></i>ok</span><span class="legend tier-poor"><i></i>poor</span><span class="legend tier-avoid"><i></i>avoid</span>
-  <span>·</span><span>Open-Meteo · PDOK</span>
-</footer>
+<footer><span>Open-Meteo · PDOK</span></footer>
 
 <svg width="0" height="0" style="position:absolute">
   <defs>
@@ -239,7 +230,7 @@ const ICONS = {
   x: '<svg viewBox="0 0 20 20" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 5l10 10M15 5L5 15"/></svg>',
 };
 
-const state = { spot: null, forecast: null, pins: new Map() };
+const state = { spot: null, forecast: null, sel: new Map() };
 
 // ---------- theme ----------
 const themeBtn = $("#theme");
@@ -302,6 +293,7 @@ function renderTitle() {
   star.hidden = false;
   star.setAttribute("aria-pressed", String(C.store.isSaved(spot)));
   star.setAttribute("aria-label", C.store.isSaved(spot) ? "Remove from saved spots" : "Save this spot");
+  $("#gps").setAttribute("aria-pressed", String(!!spot.gps));
   const sub = $("#sub");
   if (!forecast) { sub.innerHTML = ""; return; }
   const today = forecast.days[0];
@@ -325,14 +317,29 @@ function renderTitle() {
 function renderChips() {
   const chips = $("#chips");
   const spots = C.store.spots();
-  chips.innerHTML = spots.map((s, i) => `<button class="chip${C.sameSpot(s, state.spot) ? " active" : ""}" data-i="${i}"><i></i><span>${esc(shortName(s.name))}</span></button>`).join("");
+  chips.innerHTML = spots.map((s, i) => `<button class="chip${C.sameSpot(s, state.spot) ? " active" : ""}" data-i="${i}"><i></i><span>${esc(shortName(s.name))}</span><small></small></button>`).join("");
   chips.querySelectorAll(".chip").forEach((b) => b.addEventListener("click", () => pick(spots[Number(b.dataset.i)])));
-  // Live verdict dots: colour each chip by that spot's best window today (cached forecasts only, no extra fetches).
+  // Glance badge per chip: the next good window at that spot, so saved spots
+  // can be compared without opening each one. Forecasts are cached, so this
+  // costs one fetch per spot, ever.
   spots.forEach((s, i) => C.forecastFor(s).then((f) => {
-    const best = C.daySummary(f.days[0].hours).best;
     const b = chips.querySelector(`[data-i="${i}"]`);
-    if (b) b.classList.add(best ? `tier-${best.modeTier}` : "tier-none");
+    if (!b) return;
+    const g = glance(f);
+    b.classList.add(g.tier ? `tier-${g.tier}` : "tier-none");
+    b.querySelector("small").textContent = g.text;
   }).catch(() => {}));
+}
+// {tier, text} for the first day with a qualifying window: "Today 08–10", "Tmrw all day", "Wed 13–19", or "no window".
+function glance(f) {
+  for (let i = 0; i < f.days.length; i++) {
+    const s = C.daySummary(f.days[i].hours);
+    if (!s.best) continue;
+    const when = i === 0 ? "Today" : i === 1 ? "Tmrw" : C.dayLabel(f.days[i].date).slice(0, 3);
+    const span = s.qualifyingHours === s.daylightHours ? "all day" : `${C.fmtHour(s.best.startHour).slice(0, 2)}–${C.fmtHour(s.best.endHour).slice(0, 2)}`;
+    return { tier: s.best.modeTier, text: `${when} ${span}` };
+  }
+  return { tier: null, text: "no window" };
 }
 
 // ---------- days ----------
@@ -356,11 +363,13 @@ function renderDay(day, idx) {
   card.innerHTML = `
     <div class="card-h"><div class="day-l">${C.dayLabel(day.date)}<small>${C.dayDate(day.date)}</small></div>${pill}</div>
     <div class="meta">wind <span class="mono">${Math.round(s.minWind)}–${Math.round(s.maxWind)}</span> km/h · <span class="mono">${Math.round(Math.min(...temps))}–${Math.round(Math.max(...temps))}</span>°C · daylight <span class="mono">${daylight[0]?.hour}–${daylight[daylight.length-1]?.hour}</span></div>
-    <div class="ribbon" tabindex="0" role="img" aria-label="Hourly conditions for ${C.dayLabel(day.date)}"></div>`;
+    <div class="ribbon" tabindex="0" role="img" aria-label="Hourly conditions for ${C.dayLabel(day.date)}"></div>
+    <div class="detail" aria-live="polite"></div>`;
   const ribbon = card.querySelector(".ribbon");
   ribbon._day = day;
   ribbon._hours = daylight;
   ribbon._idx = idx;
+  ribbon._detail = card.querySelector(".detail");
   wireRibbon(ribbon);
   return card;
 }
@@ -415,6 +424,11 @@ function renderRibbon(rb, { animate = true } = {}) {
   }
   rb._nowIdx = ni;
 
+  // Line key, top-right of the chart: the solid line is sustained wind, the dashed one gust.
+  const kx = W - padR, ky = top - 6;
+  const key = `<line class="key-gust" x1="${r1(kx - 40)}" x2="${r1(kx - 26)}" y1="${ky}" y2="${ky}"/><text class="key" x="${r1(kx - 22)}" y="${ky + 3.5}">gust</text>` +
+    `<line class="key-wind" x1="${r1(kx - 98)}" x2="${r1(kx - 84)}" y1="${ky}" y2="${ky}"/><text class="key" x="${r1(kx - 80)}" y="${ky + 3.5}">wind</text>`;
+
   const id = `wipe${++clipSeq}`;
   const wipe = animate && !REDUCED ? `<clipPath id="${id}"><rect x="0" y="0" width="0" height="${H}"><animate attributeName="width" from="0" to="${W}" dur="0.55s" fill="freeze" calcMode="spline" keySplines="0.2 0.8 0.2 1"/></rect></clipPath>` : "";
   const clip = wipe ? ` clip-path="url(#${id})"` : "";
@@ -436,18 +450,23 @@ function renderRibbon(rb, { animate = true } = {}) {
       <path class="wind-line" d="${windLine}"/>
       ${strip}${winRects}
     </g>
-    ${axis}${arrows}${now}
+    ${axis}${arrows}${now}${key}
     <line class="cursor" x1="0" x2="0" y1="${top}" y2="${bottom}"/>
     <circle class="cursor-dot" cx="0" cy="0" r="4"/>
-  </svg>
-  <div class="lens"><div class="lens-t"><span class="tm"></span><span class="vd"></span></div><div class="lens-r r1"></div><div class="lens-r r2"></div><div class="lens-f"><span class="lens-why"></span><span class="lens-pin">pinned · tap to release</span></div></div>`;
+  </svg>`;
 
-  const pin = state.pins.get(rb._day.date);
-  if (pin != null) { rb.classList.add("pinned", "hot"); showLens(rb, pin); }
-  else if (rb._idx === 0 && ni >= 0 && !state.pins.has("__touched")) { state.pins.set(rb._day.date, ni); rb.classList.add("pinned", "hot"); showLens(rb, ni); }
+  // Selection: today opens on the current hour, other days on the start of
+  // their best window (or the first hour). Kept across re-renders.
+  if (state.sel.get(rb._day.date) == null) {
+    const best = C.daySummary(hours).best;
+    const def = ni >= 0 ? ni : best ? hours.findIndex((h) => h.hourNum === best.startHour) : 0;
+    state.sel.set(rb._day.date, Math.max(0, def));
+  }
+  showHour(rb, state.sel.get(rb._day.date));
 }
 
-function showLens(rb, i) {
+// Moves the cursor to hour i and fills the card's detail strip. Doesn't change the selection.
+function showHour(rb, i) {
   const g = rb._geom, h = rb._hours[i];
   if (!g || !h) return;
   const cx = g.x(i);
@@ -455,60 +474,48 @@ function showLens(rb, i) {
   svg.querySelector(".cursor").setAttribute("x1", cx); svg.querySelector(".cursor").setAttribute("x2", cx);
   const dot = svg.querySelector(".cursor-dot"); dot.setAttribute("cx", cx); dot.setAttribute("cy", g.y(h.windKmh));
   svg.querySelector(".col-hi").setAttribute("x", g.padL + i * g.colW);
-  const lens = rb.querySelector(".lens");
-  lens.className = `lens tier-${h.tier}`;
-  lens.querySelector(".tm").textContent = h.hour;
-  lens.querySelector(".vd").textContent = C.TIER_LABEL[h.tier] + (h.gustDowngraded ? "*" : "");
-  lens.querySelector(".r1").innerHTML = `<span class="mono">${r1(h.windKmh)} → ${r1(h.gustKmh)}</span> km/h`;
-  lens.querySelector(".r2").innerHTML = `<span class="mono">${r1(h.tempC)}°C</span> · from ${C.compass(h.windDirDeg)} ${arrowSvg(h.windDirDeg)}`;
-  const why = reason(h);
-  lens.querySelector(".lens-why").textContent = why;
-  lens.querySelector(".lens-f").classList.toggle("has", !!why);
-  const lw = lens.offsetWidth || 176;
-  lens.style.left = Math.max(2, Math.min(cx - lw / 2, g.W - lw - 2)) + "px";
-  rb._hover = i;
+  const d = rb._detail;
+  d.className = `detail tier-${h.tier}`;
+  d.innerHTML = `<span class="tm">${h.hour}</span><span class="vd">${C.TIER_LABEL[h.tier]}${h.gustDowngraded ? "*" : ""}</span>` +
+    `<span class="it"><span class="mono">${r1(h.windKmh)} → ${r1(h.gustKmh)}</span> km/h</span>` +
+    `<span class="it"><span class="mono">${r1(h.tempC)}°C</span></span>` +
+    `<span class="it">from ${C.compass(h.windDirDeg)} ${arrowSvg(h.windDirDeg)}</span>` +
+    `<span class="why">${reason(h)}</span>`;
+  rb._shown = i;
 }
+function select(rb, i) { state.sel.set(rb._day.date, i); showHour(rb, i); }
 
+// Hover previews an hour; press/drag selects continuously and the selection
+// stays where the pointer lifts. Same model for mouse and touch, no modes.
 function wireRibbon(rb) {
   const idxAt = (clientX) => {
     const g = rb._geom; if (!g) return -1;
     const rx = clientX - rb.getBoundingClientRect().left;
     return Math.max(0, Math.min(g.n - 1, Math.floor((rx - g.padL) / g.colW)));
   };
+  rb.addEventListener("pointerdown", (e) => {
+    if (e.button !== 0 && e.pointerType === "mouse") return;
+    rb._drag = true; rb.classList.add("dragging");
+    rb.setPointerCapture(e.pointerId);
+    const i = idxAt(e.clientX); if (i >= 0) select(rb, i);
+  });
   rb.addEventListener("pointermove", (e) => {
-    if (rb.classList.contains("pinned")) return;
-    const i = idxAt(e.clientX); if (i < 0) return;
-    rb.classList.add("hot");
-    if (i !== rb._hover) showLens(rb, i);
+    const i = idxAt(e.clientX); if (i < 0 || i === rb._shown) return;
+    if (rb._drag) select(rb, i);
+    else if (e.pointerType === "mouse") showHour(rb, i);
   });
-  rb.addEventListener("pointerleave", () => { if (!rb.classList.contains("pinned")) { rb.classList.remove("hot"); rb._hover = -1; } });
-  rb.addEventListener("click", (e) => {
-    const i = idxAt(e.clientX); if (i < 0) return;
-    state.pins.set("__touched", true);
-    if (rb.classList.contains("pinned") && rb._hover === i) { unpin(rb); return; }
-    pinAt(rb, i);
-  });
+  const end = () => { rb._drag = false; rb.classList.remove("dragging"); };
+  rb.addEventListener("pointerup", end);
+  rb.addEventListener("pointercancel", end);
+  rb.addEventListener("pointerleave", () => { if (!rb._drag) showHour(rb, state.sel.get(rb._day.date)); });
   rb.addEventListener("keydown", (e) => {
-    if (!["ArrowLeft", "ArrowRight", "Escape"].includes(e.key)) return;
+    if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)) return;
     e.preventDefault();
-    if (e.key === "Escape") { unpin(rb); return; }
-    const cur = rb._hover >= 0 ? rb._hover : (rb._nowIdx >= 0 ? rb._nowIdx : 0);
-    const i = Math.max(0, Math.min(rb._hours.length - 1, cur + (e.key === "ArrowRight" ? 1 : -1)));
-    pinAt(rb, i);
+    const cur = state.sel.get(rb._day.date) ?? 0, last = rb._hours.length - 1;
+    const i = e.key === "Home" ? 0 : e.key === "End" ? last : Math.max(0, Math.min(last, cur + (e.key === "ArrowRight" ? 1 : -1)));
+    select(rb, i);
   });
-  rb.addEventListener("focus", () => { if (!rb.classList.contains("pinned")) pinAt(rb, rb._nowIdx >= 0 ? rb._nowIdx : 0); });
 }
-function pinAt(rb, i) {
-  // One pinned lens at a time across cards: keeps the page calm.
-  document.querySelectorAll(".ribbon.pinned").forEach((o) => { if (o !== rb) unpin(o); });
-  state.pins.set(rb._day.date, i);
-  rb.classList.add("pinned", "hot");
-  showLens(rb, i);
-}
-function unpin(rb) { state.pins.delete(rb._day.date); rb.classList.remove("pinned", "hot"); rb._hover = -1; }
-document.addEventListener("pointerdown", (e) => {
-  if (!e.target.closest(".ribbon")) document.querySelectorAll(".ribbon.pinned").forEach(unpin);
-});
 
 new ResizeObserver(() => {
   clearTimeout(window._rsz);
@@ -517,8 +524,9 @@ new ResizeObserver(() => {
 
 // ---------- loading / swapping ----------
 async function load(spot, { first = false } = {}) {
+  spot.gps = spot.gps || spot.source === "gps";
   state.spot = spot;
-  C.store.set("lastSpot", { name: spot.name, lat: spot.lat, lon: spot.lon });
+  C.store.set("lastSpot", { name: spot.name, lat: spot.lat, lon: spot.lon, gps: spot.gps });
   const days = $("#days");
   renderTitle();
   renderChips();
@@ -529,7 +537,7 @@ async function load(spot, { first = false } = {}) {
     clearTimeout(skelTimer);
     if (state.spot !== spot) return;
     state.forecast = f;
-    state.pins.clear();
+    state.sel.clear();
     renderTitle();
     days.classList.remove("leaving");
     renderDays();
@@ -609,16 +617,19 @@ function renderSaved() {
     });
   });
 }
-$("#gps").addEventListener("click", async () => {
-  const label = $("#gps-label");
-  if (!navigator.geolocation) { label.textContent = "Location not available"; return; }
-  label.textContent = "Locating…";
+$("#gps").addEventListener("click", () => {
+  const b = $("#gps");
+  if (!navigator.geolocation || b.classList.contains("busy")) return;
+  b.classList.add("busy");
   navigator.geolocation.getCurrentPosition(async (p) => {
     const lat = p.coords.latitude, lon = p.coords.longitude;
     const name = (await C.reverseName(lat, lon)) || "My location";
-    label.textContent = "Use my location";
-    pick({ name, lat, lon });
-  }, () => { label.textContent = "Couldn't get your location"; setTimeout(() => (label.textContent = "Use my location"), 2500); }, { timeout: 8000, maximumAge: 600000 });
+    b.classList.remove("busy");
+    pick({ name, lat, lon, source: "gps" });
+  }, () => {
+    b.classList.remove("busy");
+    b.title = "Couldn't get your location"; setTimeout(() => (b.title = "Use my location"), 2500);
+  }, { timeout: 8000, maximumAge: 600000 });
 });
 
 // ---------- boot ----------
