@@ -8,6 +8,7 @@
     "deploy": "wrangler deploy",
     "test": "node --import tsx --test src/**/*.test.ts src/**/*.test.tsx",
     "typecheck": "tsc --noEmit",
+    "smoke": "node scripts/smoke.mjs",
     "cf-typegen": "wrangler types"
   },
   "engines": {
