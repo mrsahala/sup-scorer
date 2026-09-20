@@ -280,8 +280,8 @@ Weekday abbreviations come from `Intl.DateTimeFormat(dateLocale(locale), { weekd
 ## 6. PR plan
 
 Branch names are given. Every PR branches from `main` unless it says
-otherwise, is opened by the bot identity, requests `mrsahala` as reviewer,
-and is merged only after human approval (see section 7). PRs are sized
+otherwise, is opened by the bot identity, requests the repo owner as
+reviewer, and is merged only after human approval (see section 7). PRs are sized
 to be reviewable in one sitting.
 
 ### Wave 0
@@ -415,8 +415,8 @@ PR0 ─┬─ PR1 ─┬─ PR4 ─┐
 
 1. Spawn one implementing agent with: this file's path, the PR's section above copied verbatim, the model suggested, and `isolation: "worktree"` (the `Agent` tool creates the worktree; never edit the primary checkout).
 2. The agent must run `npm test` and `npm run typecheck` before pushing, and for PR3/PR6/PR7 attach screenshots. `npm run dev` starts wrangler on http://localhost:8787 for manual checks.
-3. Before the agent runs `gh pr create`, it verifies identity: `GH_TOKEN=$(security find-generic-password -a mrsahala-bleepboop -s github-claude-bot -w) gh api user -q .login` must print `mrsahala-bleepboop`. If that command is blocked or prints anything else, the agent stops and reports; it does not create the PR another way.
-4. PR description: first one or two sentences of prose are the summary (no "## Summary" header), then `## Test plan`, then the attribution footer line required by the repo's instructions. Request `mrsahala` as reviewer.
+3. Before the agent runs `gh pr create`, it confirms it is authenticated as the project's bot account rather than as a maintainer, following the credential setup documented in the local workspace instructions. If that check fails, the agent stops and reports; it does not create the PR another way.
+4. PR description: first one or two sentences of prose are the summary (no "## Summary" header), then `## Test plan`, then the attribution footer line required by the repo's instructions. Request the repo owner as reviewer.
 5. Wait for the human's approval. Never merge on your own judgment. After merge, rebase the next wave's branches on `main` before spawning.
 
 **Escalate to the human (stop the wave) when:** an implementer reports the
