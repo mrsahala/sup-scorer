@@ -27,11 +27,7 @@ async function computeScoredHours({ lat, lon }: { lat: number; lon: number }): P
   return hours.map(scoreHour);
 }
 
-// Cloudflare resolves every request's approximate lat/lon (and city) from
-// the client IP and hands it over free on request.cf - no extra request or
-// external API needed. Coarse (city-level), but enough to center the
-// landing page's map picker on the visitor instead of the whole country,
-// before they grant (or even see) the GPS button.
+// Cloudflare resolves each request's approximate lat/lon (and city) from the client IP on request.cf - free, no extra request needed.
 function ipLocationFrom(request: Request): { lat: number; lon: number; name: string | null } | null {
   const cf = request.cf as IncomingRequestCfProperties | undefined;
   const lat = Number(cf?.latitude);
@@ -40,6 +36,7 @@ function ipLocationFrom(request: Request): { lat: number; lon: number; name: str
   return { lat, lon, name: cf?.city ?? null };
 }
 
+// Not itself an entrypoint - called from fetch() below (the Worker's actual entrypoint) for every localized route.
 async function handleAppRoute(
   locale: Locale,
   path: string,

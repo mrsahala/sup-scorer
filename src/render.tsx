@@ -179,11 +179,9 @@ const PIN_ICON_SVG =
 
 // Search-then-pinpoint location picker: the search box flies a Leaflet map
 // (PDOK tiles) to a result, then the visitor drags/taps the pin to the
-// exact spot before confirming. When ipLocation is available (Cloudflare's
-// request.cf geolocation, see index.ts's ipLocationFrom), the map opens
-// centered there with the pin already dropped, instead of the whole
-// country - a starting guess that may be good enough on its own, with the
-// GPS button and search still there for anyone who wants precision.
+// exact spot before confirming. When ipLocation is set (see index.ts's
+// ipLocationFrom), the map opens centered there with the pin already
+// dropped, instead of the whole country.
 function LocationPicker({
   locale,
   ipLocation = null,
@@ -275,9 +273,7 @@ function LocationPicker({
 
   map.on("click", function (e) { selectPoint(e.latlng.lat, e.latlng.lng, null); });
 
-  // Pre-select the IP-guessed spot so the panel/link are ready immediately -
-  // a starting guess, not a confirmed pick, so it's still just a normal
-  // draggable pin the visitor can correct via search, drag, or GPS.
+  // Pre-select the IP-guessed spot so the panel/link are ready immediately.
   if (hasIpLocation) selectPoint(ipLat, ipLon, mapEl.dataset.ipName || null);
 
   var form = document.getElementById("picker-search-form");
