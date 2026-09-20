@@ -423,9 +423,8 @@ function Layout({
 // not part of the VNode tree) - prepended by hand on every page below.
 const DOCTYPE = "<!doctype html>\n";
 
-// Renders one location's hourly conditions page. switcherOpen is unused
-// here - PR6's renderer reads it to open the switcher when "/" had no
-// cookie and no IP guess.
+// Renders one location's hourly conditions page. switcherOpen is accepted
+// but not rendered yet.
 export function renderSpotPage({
   locale,
   locationName,
