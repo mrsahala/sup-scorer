@@ -107,7 +107,7 @@ function tierLabel(locale: Locale, tier: Tier): string {
 
 // Splits a t() template on its {placeholders} so the values render as JSX
 // children (auto-escaped) instead of needing dangerouslySetInnerHTML.
-function interpolate(template: string, nodes: Record<string, ComponentChildren>): ComponentChildren[] {
+export function interpolate(template: string, nodes: Record<string, ComponentChildren>): ComponentChildren[] {
   return template.split(/(\{\w+\})/).map((part, i) => {
     const key = /^\{(\w+)\}$/.exec(part)?.[1];
     return key !== undefined && key in nodes ? <Fragment key={i}>{nodes[key]}</Fragment> : part;
@@ -262,7 +262,7 @@ export function Ribbon({
         <div class="guide-labels">
           {THRESHOLDS.map(([tier, kmh]) => (
             <span key={kmh} class={`tier-${tier}`} style={`--y:${yPct(kmh)}`}>
-              {t(locale, "guideLabel", { tier: tierLabel(locale, tier).toLowerCase(), kmh: String(kmh) })}
+              {t(locale, "guideLabel", { tier: tierLabel(locale, tier), kmh: String(kmh) })}
             </span>
           ))}
         </div>
@@ -308,7 +308,7 @@ export function DetailStrip({ locale, hour }: { locale: Locale; hour: ScoredHour
         <span class="mono">
           {r1(finite(hour.windKmh))} → {r1(finite(hour.gustKmh))}
         </span>{" "}
-        km/h
+        {t(locale, "unitKmh")}
       </span>
       <span class="it">
         <span class="mono">{r1(finite(hour.tempC))}°C</span>

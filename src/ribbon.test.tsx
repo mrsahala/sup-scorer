@@ -112,8 +112,8 @@ describe("Ribbon geometry", () => {
   test("threshold guides sit at 10/15/20/25 km/h and the labels mirror them", () => {
     const html = render(<Ribbon locale="en" day={TODAY} hours={mixedDay} sel={0} />);
     for (const y of [300, 250, 200, 150]) assert.ok(html.includes(`y1="${y}" y2="${y}"`));
-    assert.ok(html.includes('--y:75%">great ≤10'));
-    assert.ok(html.includes('--y:37.5%">poor ≤25'));
+    assert.ok(html.includes('--y:75%">Great ≤10'));
+    assert.ok(html.includes('--y:37.5%">Poor ≤25'));
   });
 
   test("carries the hour count as both data-n and --n, plus the selection overlays", () => {

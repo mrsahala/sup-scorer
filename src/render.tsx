@@ -1,38 +1,56 @@
-// Renders per-hour scored forecast rows (scoring.ts's scoreHour output,
-// grouped by day) and the search/landing/attribution pages, as HTML via
-// Preact components rendered to a string. Every page is locale-aware (see
-// i18n.ts) - shows every daylight hour (not just qualifying windows) so a
-// visitor sees the whole day's shape, not just the good bits.
+// The two server-rendered pages: the conditions page and the attribution page.
 //
-// JSX auto-escapes every text child and attribute value, so - unlike the
-// hand-rolled-HTML version this replaced - dynamic values (location names,
-// search queries, PDOK results) need no manual escaping here. The one
-// deliberate exception is dangerouslySetInnerHTML on the attribution page,
-// used only with developer-authored constants (never request/user data) -
-// see the comment at its call site.
+// The conditions page is complete HTML - header, title block with the spot
+// switcher, saved-spot chips, one DayCard per day, and the #page-data blob the
+// client script reads. Markup follows the DOM contract in
+// docs/plans/ribbon-ux.md section 3, which public/style.css is written against.
+//
+// JSX auto-escapes every text child and attribute value, so dynamic values
+// (spot names, PDOK results) need no manual escaping. There are two
+// dangerouslySetInnerHTML exceptions, both with values that never come from a
+// request: the attribution page's link-bearing sentences, and the #page-data
+// blob, whose JSON is escaped by pageDataJson instead of by JSX.
 import render from "preact-render-to-string";
 import type { ComponentChildren, JSX } from "preact";
 import {
   t,
   compassLabel,
-  dateLocale,
+  dayLabel,
   localeName,
   localizedUrl,
   LOCALES,
   type Locale,
 } from "./i18n";
 import type { ScoredHour } from "./scoring";
-import { groupByDate } from "./windows";
-import { DEFAULT_START_LOCATION, type Tier } from "./config";
+import { DayCard, defaultSel, interpolate } from "./ribbon";
+import { daySummary, groupByDate, type GoodWindow } from "./windows";
+import type { SdSpot } from "./cookies";
+import { LOCATION, type Tier } from "./config";
 
-function formatDate(locale: Locale, dateStr: string): string {
-  const [y, m, d] = dateStr.split("-").map(Number);
-  return new Date(Date.UTC(y!, m! - 1, d!)).toLocaleDateString(dateLocale(locale), {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    timeZone: "UTC",
-  });
+// The spot the page is about; gps marks a position the visitor's device gave us.
+export interface PageSpot {
+  name: string;
+  lat: number;
+  lon: number;
+  gps: boolean;
+}
+
+// ~10 m. Re-searching the same place rounds differently, so coordinates are
+// compared with a tolerance rather than for equality.
+const SPOT_EPSILON = 1e-4;
+
+const sameSpot = (a: { lat: number; lon: number }, b: { lat: number; lon: number }): boolean =>
+  Math.abs(a.lat - b.lat) < SPOT_EPSILON && Math.abs(a.lon - b.lon) < SPOT_EPSILON;
+
+// PDOK names are "Street, City, Province"; the title and chips want the head of that.
+const shortName = (name: string): string => name.split(",")[0]!.trim();
+
+const pad2 = (v: number) => String(v).padStart(2, "0");
+const fmtHour = (h: number) => `${pad2(h)}:00`;
+const fmtRange = (w: GoodWindow) => `${fmtHour(w.startHour)}–${fmtHour(w.endHour)}`;
+
+function conditionsUrl(locale: Locale, spot: { name: string; lat: number; lon: number }): string {
+  return `/${locale}/conditions?lat=${spot.lat}&lon=${spot.lon}&name=${encodeURIComponent(spot.name)}`;
 }
 
 function tierLabel(locale: Locale, tier: Tier): string {
@@ -50,50 +68,282 @@ function tierLabel(locale: Locale, tier: Tier): string {
   }
 }
 
-// windDirDeg is the direction the wind blows FROM (meteorological
-// convention). The arrow shown points where it's blowing TO - more
-// intuitive as "which way you'd drift" - so it's rotated by deg + 180.
-// CSS rotate() is clockwise from upright, matching compass bearings
-// (0=N up, 90=E right, 180=S down, 270=W left), so no axis flip needed.
-function WindArrow({ locale, deg }: { locale: Locale; deg: number }): JSX.Element | null {
-  if (!Number.isFinite(deg)) return null;
-  const toDeg = (deg + 180) % 360;
-  const title = t(locale, "windFrom", { compass: compassLabel(locale, deg) });
+// The wall clock in the timezone weather.ts buckets hours into - the Worker
+// itself runs in UTC, so "today" and the now marker can't come from the raw Date.
+function localNow(now: Date, timeZone: string): { date: string; hour: number; minute: number } {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(now);
+  const part = (type: string) => parts.find((p) => p.type === type)?.value ?? "";
+  return {
+    date: `${part("year")}-${part("month")}-${part("day")}`,
+    hour: Number(part("hour")),
+    minute: Number(part("minute")),
+  };
+}
+
+// One day card's inputs, resolved once so data-sel and #page-data can't diverge.
+interface DayView {
+  date: string;
+  hours: ScoredHour[];
+  sel: number;
+  nowIndex: number;
+  isToday: boolean;
+}
+
+function buildDays(scoredHours: ScoredHour[], todayDate: string, nowHour: number): DayView[] {
+  return groupByDate(scoredHours)
+    .map((d) => ({ date: d.date, hours: d.hours.filter((h) => h.isDaylight) }))
+    .filter((d) => d.hours.length > 0)
+    .map((d) => {
+      const isToday = d.date === todayDate;
+      const nowIndex = isToday ? d.hours.findIndex((h) => h.hourNum === nowHour) : -1;
+      return { ...d, isToday, nowIndex, sel: defaultSel(d.hours, nowIndex, isToday) };
+    });
+}
+
+function ChevronIcon(): JSX.Element {
   return (
-    <span class="wind-arrow" style={{ transform: `rotate(${toDeg}deg)` }} title={title}>
-      {"↑"}
-    </span>
+    <svg
+      class="chev"
+      viewBox="0 0 20 20"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      <path d="M5 8l5 5 5-5" />
+    </svg>
   );
 }
 
-function HourCell({ locale, h }: { locale: Locale; h: ScoredHour }): JSX.Element {
+function StarIcon({ cls }: { cls?: string }): JSX.Element {
   return (
-    <div class={`hour-cell tier-${h.tier}`}>
-      <div class="hour-time">{h.hour}</div>
-      <div class="hour-tier">
-        {tierLabel(locale, h.tier)}
-        {h.gustDowngraded ? "*" : ""}
+    <svg class={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round">
+      <path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1.1 5.9L12 16.9l-5.3 2.8 1.1-5.9-4.3-4.1 5.9-.8z" />
+    </svg>
+  );
+}
+
+function GpsIcon(): JSX.Element {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+      <circle cx="10" cy="10" r="3" />
+      <circle cx="10" cy="10" r="7" />
+      <path d="M10 1v2M10 17v2M1 10h2M17 10h2" />
+    </svg>
+  );
+}
+
+function SearchIcon(): JSX.Element {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+      <circle cx="9" cy="9" r="6" />
+      <path d="M14 14l4 4" />
+    </svg>
+  );
+}
+
+// Today's verdict, in one of four states: a best window, a window all day, no
+// window today but one later in the lookahead, or nothing ahead at all.
+function Sub({ locale, days, todayDate }: { locale: Locale; days: DayView[]; todayDate: string }): JSX.Element {
+  const todayIndex = days.findIndex((d) => d.isToday);
+  const summary = todayIndex >= 0 ? daySummary(days[todayIndex]!.hours) : null;
+
+  if (summary?.best) {
+    const tier = tierLabel(locale, summary.best.modeTier);
+    const allDay = summary.daylightHours > 0 && summary.qualifyingHours === summary.daylightHours;
+    return (
+      <p class={`sub tier-${summary.best.modeTier}`}>
+        <i class="dot" />
+        <span>
+          {allDay
+            ? interpolate(t(locale, "allDayToday"), {
+                tier: <b>{tier}</b>,
+                hours: String(summary.daylightHours),
+              })
+            : interpolate(t(locale, "bestToday"), {
+                range: <b class="mono">{fmtRange(summary.best)}</b>,
+                tier: <b>{tier}</b>,
+              })}
+        </span>
+      </p>
+    );
+  }
+
+  const next = days
+    .slice(todayIndex + 1)
+    .map((d) => ({ day: d, summary: daySummary(d.hours) }))
+    .find((x) => x.summary.best);
+  return (
+    <p class="sub">
+      <i class="dot" />
+      <span>
+        {next
+          ? interpolate(t(locale, "noWindowToday"), {
+              day: <b>{dayLabel(locale, next.day.date, todayDate)}</b>,
+              hour: <b class="mono">{fmtHour(next.summary.best!.startHour)}</b>,
+            })
+          : interpolate(t(locale, "noWindowAhead"), { days: String(days.length) })}
+      </span>
+    </p>
+  );
+}
+
+function TitleBlock({
+  locale,
+  spot,
+  saved,
+  savedSpots,
+  switcherOpen,
+  days,
+  todayDate,
+}: {
+  locale: Locale;
+  spot: PageSpot;
+  saved: boolean;
+  savedSpots: SdSpot[];
+  switcherOpen: boolean;
+  days: DayView[];
+  todayDate: string;
+}): JSX.Element {
+  return (
+    <section class="title-block" id="title-block" data-open={switcherOpen ? "true" : "false"}>
+      <div class="title-row">
+        <button class="spot-btn" id="spot-btn" aria-expanded={switcherOpen ? "true" : "false"} aria-controls="switcher">
+          <span class="spot-name">{shortName(spot.name)}</span>
+          <ChevronIcon />
+        </button>
+        <button
+          class="star"
+          id="star"
+          aria-pressed={saved ? "true" : "false"}
+          aria-label={t(locale, saved ? "unsaveSpot" : "saveSpot")}
+        >
+          <StarIcon />
+        </button>
+        <button
+          class="star gps"
+          id="gps"
+          aria-pressed={spot.gps ? "true" : "false"}
+          aria-label={t(locale, "useMyLocation")}
+          title={t(locale, "useMyLocation")}
+        >
+          <GpsIcon />
+        </button>
       </div>
-      <div class="hour-wind">
-        <WindArrow locale={locale} deg={h.windDirDeg} />
-        {h.windKmh}/{h.gustKmh} km/h
+      <Sub locale={locale} days={days} todayDate={todayDate} />
+      <div class="switcher" id="switcher">
+        <div>
+          <div class="switcher-card">
+            <div class="search-wrap">
+              <SearchIcon />
+              <input
+                class="search"
+                id="search"
+                type="search"
+                placeholder={t(locale, "searchPlaceholder")}
+                autocomplete="off"
+                spellcheck={false}
+              />
+            </div>
+            <div class="list" id="results" role="listbox"></div>
+            <div class="hint" id="hint" hidden={!switcherOpen}>
+              {switcherOpen ? t(locale, "switcherOpenHint") : ""}
+            </div>
+            <div class="list-h" id="saved-h" hidden={savedSpots.length === 0}>
+              {t(locale, "savedSpots")}
+            </div>
+            <div class="list" id="saved">
+              {savedSpots.map((s) => (
+                <a key={`${s.lat},${s.lon}`} class="row" href={conditionsUrl(locale, s)}>
+                  <StarIcon cls="ic" />
+                  <span class="nm">{s.name}</span>
+                </a>
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
-      <div class="hour-temp">{h.tempC}°C</div>
+    </section>
+  );
+}
+
+// One chip per saved spot. The tier class and the <small> badge text are
+// filled in by app.js from /api/glance; without JS the chips are plain links.
+function Chips({ locale, spot, savedSpots }: { locale: Locale; spot: PageSpot; savedSpots: SdSpot[] }): JSX.Element {
+  return (
+    <div class="chips" id="chips">
+      {savedSpots.map((s) => (
+        <a
+          key={`${s.lat},${s.lon}`}
+          class={sameSpot(s, spot) ? "chip active" : "chip"}
+          href={conditionsUrl(locale, s)}
+          data-lat={s.lat}
+          data-lon={s.lon}
+        >
+          <i />
+          <span>{shortName(s.name)}</span>
+          <small />
+        </a>
+      ))}
     </div>
   );
 }
 
-function Day({ locale, date, hours }: { locale: Locale; date: string; hours: ScoredHour[] }): JSX.Element {
-  return (
-    <section class="day">
-      <h2 class="day-heading">{formatDate(locale, date)}</h2>
-      <div class="hours">
-        {hours.map((h) => (
-          <HourCell key={h.time} locale={locale} h={h} />
-        ))}
-      </div>
-    </section>
-  );
+// The client script rebuilds the detail strip as you scrub, so it needs the
+// same numbers and copy the server rendered with. JSON in a
+// <script type="application/json"> only has to escape "<" to be inert; JSX's
+// own escaping would turn the quotes into entities and corrupt it.
+function pageDataJson(locale: Locale, spot: PageSpot, saved: boolean, days: DayView[]): string {
+  const data = {
+    locale,
+    spot: { name: spot.name, lat: spot.lat, lon: spot.lon, gps: spot.gps, saved },
+    days: days.map((d) => ({
+      date: d.date,
+      sel: d.sel,
+      hours: d.hours.map((h) => ({
+        hour: h.hour,
+        hourNum: h.hourNum,
+        tier: h.tier,
+        windKmh: h.windKmh,
+        gustKmh: h.gustKmh,
+        tempC: h.tempC,
+        windDirDeg: h.windDirDeg,
+        gustDowngraded: h.gustDowngraded,
+        coldLimited: h.coldLimited,
+      })),
+    })),
+    strings: {
+      reasonGust: t(locale, "reasonGust"),
+      reasonCold: t(locale, "reasonCold"),
+      reasonSustained: t(locale, "reasonSustained"),
+      detailFrom: t(locale, "detailFrom"),
+      noMatches: t(locale, "noSearchResults"),
+      searchFailed: t(locale, "searchFailed"),
+      locating: t(locale, "locating"),
+      locationFailed: t(locale, "locationFailed"),
+      savedSpots: t(locale, "savedSpots"),
+      saveSpot: t(locale, "saveSpot"),
+      unsaveSpot: t(locale, "unsaveSpot"),
+      tiers: {
+        great: t(locale, "tierGreat"),
+        good: t(locale, "tierGood"),
+        marginal: t(locale, "tierMarginal"),
+        poor: t(locale, "tierPoor"),
+        avoid: t(locale, "tierAvoid"),
+      },
+      compass: [0, 1, 2, 3, 4, 5, 6, 7].map((i) => compassLabel(locale, i * 45)),
+    },
+  };
+  return JSON.stringify(data).replaceAll("<", "\\u003c");
 }
 
 function LangSwitcher({
@@ -121,278 +371,19 @@ function LangSwitcher({
   );
 }
 
-// "Use my location" - the only client-side JS on the site. The script body
-// itself is a static, developer-authored string (dangerouslySetInnerHTML is
-// safe here for the same reason as the attribution page's: nothing from a
-// request is interpolated into it). The per-request value (locale) travels
-// via a data-* attribute instead, which goes through normal JSX escaping.
-// The display name isn't handled here at all - the server reverse-geocodes
-// it from lat/lon once redirected (see index.ts's /conditions handler).
-function GeoLocationButton({ locale }: { locale: Locale }): JSX.Element {
-  return (
-    <>
-      <button
-        type="button"
-        id="use-location"
-        class="use-location"
-        data-locale={locale}
-        data-error={t(locale, "locationFailed")}
-      >
-        {t(locale, "useMyLocation")}
-      </button>
-      <script
-        dangerouslySetInnerHTML={{
-          __html: `
-document.getElementById("use-location")?.addEventListener("click", function () {
-  var btn = this;
-  if (!navigator.geolocation) { alert(btn.dataset.error); return; }
-  btn.disabled = true;
-  navigator.geolocation.getCurrentPosition(
-    function (pos) {
-      var lat = pos.coords.latitude, lon = pos.coords.longitude;
-      // No "name" param here on purpose - the server reverse-geocodes a
-      // label from lat/lon (see index.ts's /conditions handler).
-      window.location.href = "/" + btn.dataset.locale + "/conditions?lat=" + lat + "&lon=" + lon;
-    },
-    function () { btn.disabled = false; alert(btn.dataset.error); }
-  );
-});
-`,
-        }}
-      />
-    </>
-  );
-}
-
-// The map picker's pin marker, used as a Leaflet divIcon's html.
-const PIN_ICON_SVG =
-  '<svg width="26" height="26" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M13 2C8.6 2 5 5.5 5 9.8c0 6 8 14 8 14s8-8 8-14C21 5.5 17.4 2 13 2z" fill="var(--pin)" stroke="var(--card)" stroke-width="1.5"/><circle cx="13" cy="9.8" r="3.2" fill="var(--card)"/></svg>';
-
-// Search-then-pinpoint location picker: the search box flies a Leaflet map
-// (PDOK tiles) to a result, then the visitor drags/taps the pin to the
-// exact spot before confirming. When ipLocation is set (see index.ts's
-// ipLocationFrom), the map opens centered there with the pin already
-// dropped, instead of the whole country.
-function LocationPicker({
-  locale,
-  ipLocation = null,
-}: {
-  locale: Locale;
-  ipLocation?: { lat: number; lon: number; name: string | null } | null;
-}): JSX.Element {
-  return (
-    <div class="picker">
-      <div class="search-wrap">
-        <form id="picker-search-form" class="search">
-          <input
-            type="text"
-            id="picker-search-input"
-            placeholder={t(locale, "searchPlaceholder")}
-            autocomplete="off"
-          />
-          <button type="submit">{t(locale, "searchButton")}</button>
-        </form>
-        <div class="autocomplete" id="picker-autocomplete" hidden></div>
-      </div>
-      <div
-        id="picker-map"
-        class="picker-map"
-        data-locale={locale}
-        data-no-matches={t(locale, "noSearchResults")}
-        data-search-failed={t(locale, "searchFailed")}
-        data-ip-lat={ipLocation ? String(ipLocation.lat) : undefined}
-        data-ip-lon={ipLocation ? String(ipLocation.lon) : undefined}
-        data-ip-name={ipLocation?.name ?? undefined}
-      ></div>
-      <div class="picker-panel" id="picker-panel" hidden>
-        <div class="label">{t(locale, "pickedSpot")}</div>
-        <div class="picker-name" id="picker-name"></div>
-        <a class="picker-go" id="picker-go" href="#">
-          {t(locale, "getConditionsHere")}
-        </a>
-      </div>
-      <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-      <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-      <script
-        dangerouslySetInnerHTML={{
-          __html: `
-(function () {
-  var mapEl = document.getElementById("picker-map");
-  var locale = mapEl.dataset.locale;
-  var ipLat = mapEl.dataset.ipLat ? Number(mapEl.dataset.ipLat) : null;
-  var ipLon = mapEl.dataset.ipLon ? Number(mapEl.dataset.ipLon) : null;
-  var hasIpLocation = ipLat !== null && ipLon !== null;
-
-  var map = L.map(mapEl).setView(
-    hasIpLocation ? [ipLat, ipLon] : ${JSON.stringify(DEFAULT_START_LOCATION)},
-    hasIpLocation ? 12 : 7
-  );
-  L.tileLayer("https://service.pdok.nl/brt/achtergrondkaart/wmts/v2_0/standaard/EPSG:3857/{z}/{x}/{y}.png", {
-    attribution: "&copy; PDOK / Kadaster",
-    maxZoom: 19
-  }).addTo(map);
-
-  var pinIcon = L.divIcon({
-    className: "picker-pin",
-    html: ${JSON.stringify(PIN_ICON_SVG)},
-    iconSize: [26, 26],
-    iconAnchor: [13, 24]
-  });
-  var marker = null;
-
-  var panel = document.getElementById("picker-panel");
-  var nameEl = document.getElementById("picker-name");
-  var goEl = document.getElementById("picker-go");
-
-  function selectPoint(lat, lon, knownName) {
-    if (!marker) marker = L.marker([lat, lon], { icon: pinIcon, draggable: true }).addTo(map).on("dragend", function () {
-      var pos = marker.getLatLng();
-      selectPoint(pos.lat, pos.lng, null);
-    });
-    else marker.setLatLng([lat, lon]);
-
-    panel.hidden = false;
-    goEl.href = "/" + locale + "/conditions?lat=" + lat + "&lon=" + lon + (knownName ? "&name=" + encodeURIComponent(knownName) : "");
-
-    if (knownName) { nameEl.textContent = knownName; return; }
-    nameEl.textContent = "…";
-    fetch("/api/reverse?lat=" + lat + "&lon=" + lon)
-      .then(function (r) { return r.json(); })
-      .then(function (data) { nameEl.textContent = data.name || nameEl.textContent; })
-      .catch(function () {});
-  }
-
-  map.on("click", function (e) { selectPoint(e.latlng.lat, e.latlng.lng, null); });
-
-  // Pre-select the IP-guessed spot so the panel/link are ready immediately.
-  if (hasIpLocation) selectPoint(ipLat, ipLon, mapEl.dataset.ipName || null);
-
-  var form = document.getElementById("picker-search-form");
-  var input = document.getElementById("picker-search-input");
-  var dropdown = document.getElementById("picker-autocomplete");
-  var results = [];
-  var activeIndex = -1;
-  var debounceTimer = null;
-
-  function goToResult(r) {
-    map.flyTo([r.lat, r.lon], 15);
-    selectPoint(r.lat, r.lon, r.name);
-    mapEl.scrollIntoView({ behavior: "smooth", block: "center" });
-  }
-
-  function closeDropdown() {
-    dropdown.hidden = true;
-    dropdown.innerHTML = "";
-    activeIndex = -1;
-  }
-
-  function showMessage(text) {
-    dropdown.innerHTML = "";
-    var p = document.createElement("p");
-    p.className = "empty";
-    p.textContent = text || "";
-    dropdown.appendChild(p);
-    dropdown.hidden = false;
-  }
-
-  function pick(r) {
-    input.value = r.name;
-    goToResult(r);
-    closeDropdown();
-  }
-
-  function renderDropdown() {
-    dropdown.innerHTML = "";
-    results.forEach(function (r, i) {
-      var btn = document.createElement("button");
-      btn.type = "button";
-      btn.textContent = r.name;
-      if (i === activeIndex) btn.className = "active";
-      // mousedown (fires before the input's blur) + preventDefault, so
-      // tapping a suggestion doesn't lose the selection to blur closing
-      // the dropdown first.
-      btn.addEventListener("mousedown", function (e) {
-        e.preventDefault();
-        pick(r);
-      });
-      dropdown.appendChild(btn);
-    });
-    dropdown.hidden = false;
-  }
-
-  // Live suggestions as you type - like a search engine's autocomplete,
-  // not a results page. Debounced so every keystroke doesn't hit the API.
-  input.addEventListener("input", function () {
-    var q = input.value.trim();
-    clearTimeout(debounceTimer);
-    if (!q) { closeDropdown(); return; }
-    debounceTimer = setTimeout(function () {
-      fetch("/api/search?q=" + encodeURIComponent(q))
-        .then(function (r) { return r.json(); })
-        .then(function (data) {
-          results = data;
-          activeIndex = -1;
-          if (!results.length) { showMessage(mapEl.dataset.noMatches); return; }
-          renderDropdown();
-        })
-        .catch(function () { results = []; showMessage(mapEl.dataset.searchFailed); });
-    }, 250);
-  });
-
-  input.addEventListener("keydown", function (e) {
-    if (!results.length) return;
-    if (e.key === "ArrowDown") {
-      e.preventDefault();
-      activeIndex = (activeIndex + 1) % results.length;
-      renderDropdown();
-    } else if (e.key === "ArrowUp") {
-      e.preventDefault();
-      activeIndex = (activeIndex - 1 + results.length) % results.length;
-      renderDropdown();
-    } else if (e.key === "Escape") {
-      closeDropdown();
-    }
-  });
-
-  // Delayed so a suggestion's mousedown (above) still gets to run first.
-  input.addEventListener("blur", function () { setTimeout(closeDropdown, 150); });
-
-  form.addEventListener("submit", function (e) {
-    e.preventDefault();
-    clearTimeout(debounceTimer);
-    // Whatever type the top (or keyboard-highlighted) match is - city,
-    // address, POI, no further filtering - go straight there.
-    var chosen = results[activeIndex >= 0 ? activeIndex : 0];
-    if (chosen) pick(chosen);
-  });
-})();
-`,
-        }}
-      />
-    </div>
-  );
-}
-
-// Links to the attribution page (required by Open-Meteo/PDOK's license terms).
-function Footer({ locale }: { locale: Locale }): JSX.Element {
-  return (
-    <footer class="site-footer">
-      <a href={localizedUrl(locale, "/attribution", "")}>{t(locale, "dataAttribution")}</a>
-    </footer>
-  );
-}
-
 function Layout({
   title,
   locale,
   currentPath,
   search,
+  pageData,
   children,
 }: {
   title: string;
   locale: Locale;
   currentPath: string;
   search: string;
+  pageData?: string;
   children: ComponentChildren;
 }): JSX.Element {
   return (
@@ -404,16 +395,23 @@ function Layout({
         <link rel="stylesheet" href="/style.css" />
       </head>
       <body>
-        <main>
-          <div class="top-bar">
-            <h1>
-              <a href={localizedUrl(locale, "/", "")}>supdawg</a>
-            </h1>
+        <header class="hdr">
+          <div class="hdr-in">
+            <a class="wordmark" href={localizedUrl(locale, "/", "")}>
+              <i />
+              supdawg
+            </a>
             <LangSwitcher locale={locale} currentPath={currentPath} search={search} />
           </div>
-          {children}
-          <Footer locale={locale} />
-        </main>
+        </header>
+        <main>{children}</main>
+        {/* Links to the attribution page, required by Open-Meteo/PDOK's license terms. */}
+        <footer class="site-footer">
+          <a href={localizedUrl(locale, "/attribution", "")}>{t(locale, "dataAttribution")}</a>
+        </footer>
+        {pageData === undefined ? null : (
+          <script type="application/json" id="page-data" dangerouslySetInnerHTML={{ __html: pageData }} />
+        )}
       </body>
     </html>
   );
@@ -423,71 +421,68 @@ function Layout({
 // not part of the VNode tree) - prepended by hand on every page below.
 const DOCTYPE = "<!doctype html>\n";
 
-// Renders one location's hourly conditions page. switcherOpen is accepted
-// but not rendered yet.
-export function renderSpotPage({
+// Renders one spot's conditions: the whole site, apart from /attribution.
+export function renderConditionsPage({
   locale,
-  locationName,
+  spot,
   scoredHours,
   currentPath,
   search,
-  switcherOpen: _switcherOpen,
+  switcherOpen = false,
+  savedSpots = [],
+  now = new Date(),
 }: {
   locale: Locale;
-  locationName: string;
+  spot: PageSpot;
   scoredHours: ScoredHour[];
   currentPath: string;
   search: string;
   switcherOpen?: boolean;
+  savedSpots?: SdSpot[];
+  now?: Date;
 }): string {
-  // groupByDate keeps night hours now; this page still shows daylight only.
-  const days = groupByDate(scoredHours)
-    .map((d) => ({ date: d.date, hours: d.hours.filter((h) => h.isDaylight) }))
-    .filter((d) => d.hours.length > 0);
+  const clock = localNow(now, LOCATION.timezone);
+  const days = buildDays(scoredHours, clock.date, clock.hour);
+  const saved = savedSpots.some((s) => sameSpot(s, spot));
+
   return (
     DOCTYPE +
     render(
       <Layout
-        title={t(locale, "siteTitleSpot", { location: locationName })}
+        title={t(locale, "siteTitleSpot", { location: shortName(spot.name) })}
         locale={locale}
         currentPath={currentPath}
         search={search}
+        pageData={pageDataJson(locale, spot, saved, days)}
       >
-        <p class="subtitle">{t(locale, "subtitleSpot", { location: locationName })}</p>
-        <p class="legend">{t(locale, "legend")}</p>
-        {days.length ? (
-          days.map((d) => <Day key={d.date} locale={locale} date={d.date} hours={d.hours} />)
-        ) : (
-          <p class="empty">{t(locale, "noForecast")}</p>
-        )}
-        <p class="back">
-          <a href={localizedUrl(locale, "/", "")}>{t(locale, "backHome")}</a>
-        </p>
-      </Layout>
-    )
-  );
-}
-
-// Renders the homepage: search-then-pinpoint location picker (see
-// LocationPicker) - no curated list, any point in the Netherlands works.
-export function renderLandingPage({
-  locale,
-  currentPath,
-  search,
-  ipLocation = null,
-}: {
-  locale: Locale;
-  currentPath: string;
-  search: string;
-  ipLocation?: { lat: number; lon: number; name: string | null } | null;
-}): string {
-  return (
-    DOCTYPE +
-    render(
-      <Layout title={t(locale, "siteTitleLanding")} locale={locale} currentPath={currentPath} search={search}>
-        <p class="subtitle">{t(locale, "subtitleLanding")}</p>
-        <GeoLocationButton locale={locale} />
-        <LocationPicker locale={locale} ipLocation={ipLocation} />
+        <TitleBlock
+          locale={locale}
+          spot={spot}
+          saved={saved}
+          savedSpots={savedSpots}
+          switcherOpen={switcherOpen}
+          days={days}
+          todayDate={clock.date}
+        />
+        <Chips locale={locale} spot={spot} savedSpots={savedSpots} />
+        <div class="days" id="days">
+          {days.length ? (
+            days.map((d) => (
+              <DayCard
+                key={d.date}
+                locale={locale}
+                date={d.date}
+                hours={d.hours}
+                today={clock.date}
+                sel={d.sel}
+                nowIndex={d.nowIndex}
+                nowFraction={clock.minute / 60}
+              />
+            ))
+          ) : (
+            <p class="empty">{t(locale, "noForecast")}</p>
+          )}
+        </div>
       </Layout>
     )
   );

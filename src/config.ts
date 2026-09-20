@@ -26,9 +26,6 @@ export const LOCATION: Location = {
 // How many days ahead to fetch/score forecast data for.
 export const LOOKAHEAD_DAYS = 4;
 
-// Where the landing page's map picker opens before a search or GPS fix.
-export const DEFAULT_START_LOCATION: [number, number] = [52.1, 5.3]; // NL center
-
 // One entry of the WIND_TIERS table below: a tier name and the sustained
 // wind speed (km/h) it tops out at, before any gust adjustment.
 export interface WindTierConfig {
