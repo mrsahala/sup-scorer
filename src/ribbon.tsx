@@ -194,6 +194,7 @@ export function Ribbon({
   const windLine = monotone(windPts);
   const windArea = `${windLine} L${VB_W} ${VB_H} L0 ${VB_H} Z`;
   const gustBand = `${monotone(gustPts)} ${monotone([...windPts].reverse()).replace(/^M/, "L")} Z`;
+  const wipeId = `wipe-${day}`;
 
   const windowStarts = new Map(
     [...findWindows(hours)].sort((a, b) => a.startHour - b.startHour).map((w) => [w.startHour, w])
@@ -234,6 +235,21 @@ export function Ribbon({
       <div class="chart">
         <svg class="curves" viewBox={`0 0 ${VB_W} ${VB_H}`} preserveAspectRatio="none" aria-hidden="true">
           <defs>
+            {/* Animating the clip's width, not the group's, lets CSS drop the
+                clip-path entirely for reduced motion. */}
+            <clipPath id={wipeId}>
+              <rect x="0" y="0" width={VB_W} height={VB_H}>
+                <animate
+                  attributeName="width"
+                  from="0"
+                  to={VB_W}
+                  dur="0.55s"
+                  fill="freeze"
+                  calcMode="spline"
+                  keySplines="0.2 0.8 0.2 1"
+                />
+              </rect>
+            </clipPath>
             <clipPath id={areaId}>
               <path d={windArea} />
             </clipPath>
@@ -243,21 +259,23 @@ export function Ribbon({
               <line key={kmh} y1={yAt(kmh)} y2={yAt(kmh)} x1="0" x2={VB_W} />
             ))}
           </g>
-          <g clip-path={`url(#${areaId})`}>
-            {hours.map((h, i) => (
-              <rect
-                key={h.time}
-                class={`tier-col tier-${h.tier}`}
-                x={r1((i / n) * VB_W)}
-                width={r1(VB_W / n)}
-                y="0"
-                height={VB_H}
-              />
-            ))}
+          <g class="wipe" clip-path={`url(#${wipeId})`}>
+            <g clip-path={`url(#${areaId})`}>
+              {hours.map((h, i) => (
+                <rect
+                  key={h.time}
+                  class={`tier-col tier-${h.tier}`}
+                  x={r1((i / n) * VB_W)}
+                  width={r1(VB_W / n)}
+                  y="0"
+                  height={VB_H}
+                />
+              ))}
+            </g>
+            <path class="gust-band" d={gustBand} />
+            <path class="gust-line" d={monotone(gustPts)} vector-effect="non-scaling-stroke" />
+            <path class="wind-line" d={windLine} vector-effect="non-scaling-stroke" />
           </g>
-          <path class="gust-band" d={gustBand} />
-          <path class="gust-line" d={monotone(gustPts)} vector-effect="non-scaling-stroke" />
-          <path class="wind-line" d={windLine} vector-effect="non-scaling-stroke" />
         </svg>
         <div class="guide-labels">
           {THRESHOLDS.map(([tier, kmh]) => (
