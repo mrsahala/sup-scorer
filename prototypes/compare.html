@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>supdawg UX compare</title>
+<link rel="stylesheet" href="./tokens.css" />
+<style>
+  body { padding: 0; min-height: 100vh; display: flex; flex-direction: column; }
+  header { display: flex; align-items: center; gap: 16px; padding: 10px 16px; border-bottom: 1px solid var(--line); background: var(--bg-2); flex-wrap: wrap; }
+  header h1 { font-size: 15px; margin: 0; font-weight: 600; }
+  header .hint { color: var(--muted); font-size: 12px; }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; }
+  .seg button { border: 0; background: transparent; color: var(--fg-2); padding: 6px 12px; font: inherit; font-size: 12px; cursor: pointer; }
+  .seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-fg); }
+  main { flex: 1; display: flex; gap: 16px; padding: 16px; overflow: auto; align-items: flex-start; justify-content: center; }
+  .frame { display: flex; flex-direction: column; gap: 8px; flex: 0 0 auto; }
+  .frame h2 { margin: 0; font-size: 12px; font-weight: 600; color: var(--fg-2); display: flex; align-items: baseline; gap: 8px; }
+  .frame h2 span { color: var(--muted); font-weight: 400; }
+  .frame h2 a { margin-left: auto; color: var(--accent); font-size: 11px; text-decoration: none; }
+  iframe { border: 1px solid var(--line); border-radius: 18px; background: var(--bg-2); box-shadow: var(--shadow); width: var(--w); height: var(--h); transition: width 300ms var(--ease), height 300ms var(--ease); }
+  main[data-size="phone"] { --w: 390px; --h: 780px; }
+  main[data-size="tablet"] { --w: 768px; --h: 900px; }
+  main[data-size="desktop"] { --w: 1100px; --h: 820px; }
+  main[data-size="desktop"], main[data-size="tablet"] { justify-content: flex-start; }
+</style>
+</head>
+<body>
+<header>
+  <h1>supdawg · UX variations</h1>
+  <div class="seg" id="size">
+    <button aria-pressed="true" data-size="phone">Phone 390</button>
+    <button aria-pressed="false" data-size="tablet">Tablet 768</button>
+    <button aria-pressed="false" data-size="desktop">Desktop 1100</button>
+  </div>
+  <span class="hint">All three hit live Open-Meteo/PDOK data. Prototypes keep saved spots in localStorage.</span>
+</header>
+<main data-size="phone">
+  <section class="frame">
+    <h2>Current <span>supdawg.nl</span><a href="https://supdawg.nl/en" target="_blank">open ↗</a></h2>
+    <iframe src="https://supdawg.nl/en" title="Current site"></iframe>
+  </section>
+  <section class="frame">
+    <h2>A · Ribbon <span>hours on x, days stacked, scrub lens</span><a href="./a-ribbon.html" target="_blank">open ↗</a></h2>
+    <iframe src="./a-ribbon.html" title="Variation A"></iframe>
+  </section>
+  <section class="frame">
+    <h2>B · Stream <span>one vertical time axis, spot rail</span><a href="./b-stream.html" target="_blank">open ↗</a></h2>
+    <iframe src="./b-stream.html" title="Variation B"></iframe>
+  </section>
+</main>
+<script>
+  const main = document.querySelector("main");
+  document.querySelectorAll("#size button").forEach((b) => b.addEventListener("click", () => {
+    document.querySelectorAll("#size button").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+    main.dataset.size = b.dataset.size;
+  }));
+</script>
+</body>
+</html>
