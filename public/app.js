@@ -125,9 +125,15 @@ function wireRibbon(rb, detail, hours, strings) {
   rb.addEventListener("pointerdown", (e) => {
     if (e.pointerType === "mouse" && e.button !== 0) return;
     dragging = true;
-    rb.setPointerCapture(e.pointerId);
     const i = idxAt(e.clientX);
     if (i >= 0) select(i);
+    // Capture keeps a drag that wanders off the ribbon reporting here. It
+    // throws if the pointer is already gone, which must not lose the tap.
+    try {
+      rb.setPointerCapture(e.pointerId);
+    } catch {
+      dragging = false;
+    }
   });
   rb.addEventListener("pointermove", (e) => {
     const i = idxAt(e.clientX);
