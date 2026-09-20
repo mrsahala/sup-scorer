@@ -22,6 +22,7 @@ import {
   type Locale,
 } from "./i18n";
 import type { ScoredHour } from "./scoring";
+import { groupByDate } from "./windows";
 import { DEFAULT_START_LOCATION, type Tier } from "./config";
 
 function formatDate(locale: Locale, dateStr: string): string {
@@ -80,16 +81,6 @@ function HourCell({ locale, h }: { locale: Locale; h: ScoredHour }): JSX.Element
       <div class="hour-temp">{h.tempC}°C</div>
     </div>
   );
-}
-
-function groupByDate(hours: ScoredHour[]): Map<string, ScoredHour[]> {
-  const byDate = new Map<string, ScoredHour[]>();
-  for (const h of hours) {
-    if (!h.isDaylight) continue;
-    if (!byDate.has(h.date)) byDate.set(h.date, []);
-    byDate.get(h.date)!.push(h);
-  }
-  return byDate;
 }
 
 function Day({ locale, date, hours }: { locale: Locale; date: string; hours: ScoredHour[] }): JSX.Element {
@@ -446,8 +437,10 @@ export function renderSpotPage({
   currentPath: string;
   search: string;
 }): string {
-  const byDate = groupByDate(scoredHours);
-  const days = [...byDate.entries()];
+  // groupByDate keeps night hours now; this page still shows daylight only.
+  const days = groupByDate(scoredHours)
+    .map((d) => ({ date: d.date, hours: d.hours.filter((h) => h.isDaylight) }))
+    .filter((d) => d.hours.length > 0);
   return (
     DOCTYPE +
     render(
@@ -460,7 +453,7 @@ export function renderSpotPage({
         <p class="subtitle">{t(locale, "subtitleSpot", { location: locationName })}</p>
         <p class="legend">{t(locale, "legend")}</p>
         {days.length ? (
-          days.map(([date, hours]) => <Day key={date} locale={locale} date={date} hours={hours} />)
+          days.map((d) => <Day key={d.date} locale={locale} date={d.date} hours={d.hours} />)
         ) : (
           <p class="empty">{t(locale, "noForecast")}</p>
         )}

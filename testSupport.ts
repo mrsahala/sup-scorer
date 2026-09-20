@@ -86,3 +86,47 @@ export function openMeteoRoute(): MockRoute {
     respond: () => ({ status: 200, json: openMeteoFixture() }),
   };
 }
+
+// Open-Meteo-shaped fixture for windows.ts: three days, daylight 06:00-20:00
+// (15 hours each), each day's windKmh chosen to produce a specific window
+// shape - day 1 a 3h window then a 1h window, day 2 all-day, day 3 none.
+export function threeDayWindowsFixture() {
+  const days: [string, number[]][] = [
+    ["2026-08-27", [8, 8, 9, 22, 12, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30]],
+    ["2026-08-28", Array(15).fill(8)],
+    ["2026-08-29", Array(15).fill(30)],
+  ];
+  const time: string[] = [];
+  const temperature_2m: number[] = [];
+  const windspeed_10m: number[] = [];
+  const windgusts_10m: number[] = [];
+  const winddirection_10m: number[] = [];
+  const weathercode: number[] = [];
+  for (const [date, winds] of days) {
+    winds.forEach((wind, i) => {
+      const hh = String(6 + i).padStart(2, "0");
+      time.push(`${date}T${hh}:00`);
+      temperature_2m.push(18);
+      windspeed_10m.push(wind);
+      windgusts_10m.push(wind); // equal to wind - no gust downgrade in this fixture
+      winddirection_10m.push(200);
+      weathercode.push(0);
+    });
+  }
+  return {
+    hourly: { time, temperature_2m, windspeed_10m, windgusts_10m, winddirection_10m, weathercode },
+    daily: {
+      time: days.map(([date]) => date),
+      sunrise: days.map(([date]) => `${date}T06:00`),
+      sunset: days.map(([date]) => `${date}T20:00`),
+    },
+  };
+}
+
+// A ready-to-use mockFetch route serving threeDayWindowsFixture().
+export function threeDayWindowsRoute(): MockRoute {
+  return {
+    match: (url) => url.includes("api.open-meteo.com"),
+    respond: () => ({ status: 200, json: threeDayWindowsFixture() }),
+  };
+}
