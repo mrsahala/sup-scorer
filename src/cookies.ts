@@ -12,7 +12,7 @@ export interface SdLast {
   gps: boolean;
 }
 
-// sd_spots: written by client JS (a later PR); read here for chip rendering.
+// sd_spots: written by client JS, read here for chip rendering.
 export interface SdSpot {
   name: string;
   lat: number;
