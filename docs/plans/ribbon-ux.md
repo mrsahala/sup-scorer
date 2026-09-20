@@ -51,7 +51,7 @@ TypeScript, no bundling. It does exactly five things: scrub/select an hour
 on a ribbon, run the switcher (search suggestions, keyboard), GPS button,
 star button (cookie), and chip glance badges (fetch). It reads per-page
 data from a `<script type="application/json" id="page-data">` blob that
-the server renders (JSON with `<` escaped as `<`). It never builds
+the server renders (JSON with every `<` written as the six-character escape sequence backslash-u003c). It never builds
 HTML from untrusted strings without `textContent`.
 
 **Ribbon drawn to be responsive without JS.** HTML rows for everything
