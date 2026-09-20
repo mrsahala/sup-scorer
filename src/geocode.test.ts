@@ -7,7 +7,7 @@ describe("searchLocation", () => {
   test("parses centroide_ll's WKT point into lat/lon", async (t) => {
     mockFetch(t, [
       {
-        match: (url) => url.includes("locatieserver/search/v3_1/free"),
+        match: (url) => url.includes("locatieserver/search/v3_1/suggest"),
         respond: () => ({
           status: 200,
           json: {
@@ -26,7 +26,7 @@ describe("searchLocation", () => {
   test("excludes gemeente and provincie via fq - broad regions that otherwise outrank the actual place", async (t) => {
     const calls = mockFetch(t, [
       {
-        match: (url) => url.includes("locatieserver/search/v3_1/free"),
+        match: (url) => url.includes("locatieserver/search/v3_1/suggest"),
         respond: () => ({ status: 200, json: { response: { docs: [] } } }),
       },
     ]);
@@ -36,28 +36,19 @@ describe("searchLocation", () => {
     assert.deepEqual(url.searchParams.getAll("fq"), ["-type:gemeente", "-type:provincie"]);
   });
 
-  test("appends a wildcard so a partial word like 'amster' still matches", async (t) => {
+  test("passes the query straight through - /suggest already does prefix matching", async (t) => {
     const calls = mockFetch(t, [
-      { match: (url) => url.includes("locatieserver/search/v3_1/free"), respond: () => ({ status: 200, json: { response: { docs: [] } } }) },
+      { match: (url) => url.includes("locatieserver/search/v3_1/suggest"), respond: () => ({ status: 200, json: { response: { docs: [] } } }) },
     ]);
     await searchLocation("amster");
     const url = new URL(calls[0]!.url);
-    assert.equal(url.searchParams.get("q"), "amster*");
-  });
-
-  test("does not double up a wildcard the caller already supplied", async (t) => {
-    const calls = mockFetch(t, [
-      { match: (url) => url.includes("locatieserver/search/v3_1/free"), respond: () => ({ status: 200, json: { response: { docs: [] } } }) },
-    ]);
-    await searchLocation("amster*");
-    const url = new URL(calls[0]!.url);
-    assert.equal(url.searchParams.get("q"), "amster*");
+    assert.equal(url.searchParams.get("q"), "amster");
   });
 
   test("skips a doc with no parseable centroide_ll", async (t) => {
     mockFetch(t, [
       {
-        match: (url) => url.includes("locatieserver/search/v3_1/free"),
+        match: (url) => url.includes("locatieserver/search/v3_1/suggest"),
         respond: () => ({
           status: 200,
           json: { response: { docs: [{ weergavenaam: "Nowhere", type: "woonplaats" }] } },
@@ -71,7 +62,7 @@ describe("searchLocation", () => {
   test("throws with status and body text when the request fails", async (t) => {
     mockFetch(t, [
       {
-        match: (url) => url.includes("locatieserver/search/v3_1/free"),
+        match: (url) => url.includes("locatieserver/search/v3_1/suggest"),
         respond: () => ({ status: 500, text: "server exploded" }),
       },
     ]);

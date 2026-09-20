@@ -1,5 +1,6 @@
 // Forward and reverse NL geocoding via PDOK's Locatieserver.
-const ENDPOINT = "https://api.pdok.nl/bzk/locatieserver/search/v3_1/free";
+// Forward search uses /suggest
+const ENDPOINT = "https://api.pdok.nl/bzk/locatieserver/search/v3_1/suggest";
 const REVERSE_ENDPOINT = "https://api.pdok.nl/bzk/locatieserver/search/v3_1/reverse";
 
 // One searchLocation match: a display name, PDOK's place-type ("gemeente",
@@ -22,8 +23,7 @@ interface PdokResponse {
 
 export async function searchLocation(query: string, { limit = 5 }: { limit?: number } = {}): Promise<GeocodeResult[]> {
   const url = new URL(ENDPOINT);
-  // Prefix match the input.
-  url.searchParams.set("q", /[*~]$/.test(query) ? query : `${query}*`);
+  url.searchParams.set("q", query);
   url.searchParams.set("fl", "weergavenaam,centroide_ll,type");
   url.searchParams.set("rows", String(limit));
   // gemeente/provincie are broad administrative regions, not places someone
