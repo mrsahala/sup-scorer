@@ -79,6 +79,30 @@ describe("fetchForecast", () => {
     assert.equal(url.searchParams.get("temperature_unit"), "celsius");
   });
 
+  test("rounds lat/lon to 3 decimals in the URL", async (t) => {
+    const calls = mockFetch(t, [
+      { match: (url) => url.includes("api.open-meteo.com"), respond: () => ({ status: 200, json: fixture() }) },
+    ]);
+
+    await fetchForecast({ lat: 52.347890675735485, lon: 4.889856145643074, timezone: "Europe/Amsterdam", days: 1 });
+
+    const url = new URL(calls[0]!.url);
+    assert.equal(url.searchParams.get("latitude"), "52.348");
+    assert.equal(url.searchParams.get("longitude"), "4.89");
+  });
+
+  test("passes Cloudflare cache options on the fetch", async (t) => {
+    const calls = mockFetch(t, [
+      { match: (url) => url.includes("api.open-meteo.com"), respond: () => ({ status: 200, json: fixture() }) },
+    ]);
+
+    await fetchForecast({ lat: 52.1, lon: 4.9, timezone: "Europe/Amsterdam", days: 1 });
+
+    const init = calls[0]!.init as { cf?: { cacheTtl?: number; cacheEverything?: boolean } };
+    assert.equal(init.cf?.cacheTtl, 600);
+    assert.equal(init.cf?.cacheEverything, true);
+  });
+
   test("defaults to config.ts's LOCATION/LOOKAHEAD_DAYS when called with no args", async (t) => {
     const calls = mockFetch(t, [
       { match: (url) => url.includes("api.open-meteo.com"), respond: () => ({ status: 200, json: fixture() }) },
