@@ -26,6 +26,7 @@ import { DayCard, defaultSel, interpolate } from "./ribbon";
 import { daySummary, groupByDate, type GoodWindow } from "./windows";
 import type { SdSpot } from "./cookies";
 import { LOCATION, type Tier } from "./config";
+import { thumbTiles } from "./tiles";
 
 // The spot the page is about; gps marks a position the visitor's device gave us.
 export interface PageSpot {
@@ -142,6 +143,22 @@ function GpsIcon(): JSX.Element {
   );
 }
 
+// Matches the marker icon app.js builds as a Leaflet divIcon, so the static
+// thumbnail and the interactive pin read as the same pin.
+function ThumbPinIcon(): JSX.Element {
+  return (
+    <svg class="thumb-pin" viewBox="0 0 26 26" width="22" height="22">
+      <path
+        d="M13 2C8.6 2 5 5.5 5 9.8c0 6 8 14 8 14s8-8 8-14C21 5.5 17.4 2 13 2z"
+        fill="var(--poor)"
+        stroke="#fff"
+        stroke-width="1.5"
+      />
+      <circle cx="13" cy="9.8" r="3.2" fill="#fff" />
+    </svg>
+  );
+}
+
 function SearchIcon(): JSX.Element {
   return (
     <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
@@ -197,12 +214,59 @@ function Sub({ locale, days, todayDate }: { locale: Locale; days: DayView[]; tod
   );
 }
 
+// Static 2x2 tile mosaic centered on the spot, always visible with no JS.
+// Tapping it (app.js's mapPanel job) expands the pinpoint panel below.
+function MapThumb({ locale, spot }: { locale: Locale; spot: PageSpot }): JSX.Element {
+  const { urls, left, top } = thumbTiles(spot.lat, spot.lon);
+  return (
+    <button
+      class="map-thumb"
+      id="map-thumb"
+      aria-expanded="false"
+      aria-controls="map-panel"
+      aria-label={`${t(locale, "showOnMap")}: ${spot.name}`}
+      title={t(locale, "showOnMap")}
+    >
+      <span class="tiles" style={{ left: `${left}px`, top: `${top}px` }}>
+        {urls.map((url) => (
+          <img key={url} alt="" src={url} />
+        ))}
+      </span>
+      <ThumbPinIcon />
+    </button>
+  );
+}
+
+// The pinpoint panel: a Leaflet map app.js creates on first open, plus a
+// name/link foot bar filled in once a point is picked (map click or drag).
+function MapPanel({ locale }: { locale: Locale }): JSX.Element {
+  return (
+    <div class="map-panel" id="map-panel">
+      <div>
+        <div class="map-card">
+          <div class="map" id="map" />
+          <div class="map-foot">
+            <span class="map-hint" id="map-hint">
+              {t(locale, "mapHint")}
+            </span>
+            <span class="map-name" id="map-name" />
+            <a class="map-go" id="map-go" hidden href="#">
+              {t(locale, "useThisPoint")}
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function TitleBlock({
   locale,
   spot,
   saved,
   savedSpots,
   switcherOpen,
+  mapOpen,
   days,
   todayDate,
 }: {
@@ -211,12 +275,19 @@ function TitleBlock({
   saved: boolean;
   savedSpots: SdSpot[];
   switcherOpen: boolean;
+  mapOpen: boolean;
   days: DayView[];
   todayDate: string;
 }): JSX.Element {
   return (
-    <section class="title-block" id="title-block" data-open={switcherOpen ? "true" : "false"}>
+    <section
+      class="title-block"
+      id="title-block"
+      data-open={switcherOpen ? "true" : "false"}
+      data-map={mapOpen ? "true" : "false"}
+    >
       <div class="title-row">
+        <MapThumb locale={locale} spot={spot} />
         <button class="spot-btn" id="spot-btn" aria-expanded={switcherOpen ? "true" : "false"} aria-controls="switcher">
           <span class="spot-name">{shortName(spot.name)}</span>
           <ChevronIcon />
@@ -272,6 +343,7 @@ function TitleBlock({
           </div>
         </div>
       </div>
+      <MapPanel locale={locale} />
     </section>
   );
 }
@@ -333,6 +405,7 @@ function pageDataJson(locale: Locale, spot: PageSpot, saved: boolean, days: DayV
       savedSpots: t(locale, "savedSpots"),
       saveSpot: t(locale, "saveSpot"),
       unsaveSpot: t(locale, "unsaveSpot"),
+      pickedPoint: t(locale, "pickedPoint"),
       tiers: {
         great: t(locale, "tierGreat"),
         good: t(locale, "tierGood"),
@@ -430,6 +503,7 @@ export function renderConditionsPage({
   currentPath,
   search,
   switcherOpen = false,
+  mapOpen = false,
   savedSpots = [],
   now = new Date(),
 }: {
@@ -439,6 +513,10 @@ export function renderConditionsPage({
   currentPath: string;
   search: string;
   switcherOpen?: boolean;
+  // True only for the response to a fresh GPS navigation (src=gps), never
+  // from the persisted spot.gps flag - that flag survives page reloads via
+  // the sd_last cookie and would otherwise reopen the panel forever.
+  mapOpen?: boolean;
   savedSpots?: SdSpot[];
   now?: Date;
 }): string {
@@ -462,6 +540,7 @@ export function renderConditionsPage({
           saved={saved}
           savedSpots={savedSpots}
           switcherOpen={switcherOpen}
+          mapOpen={mapOpen}
           days={days}
           todayDate={clock.date}
         />

@@ -189,6 +189,51 @@ describe("XSS-shaped input is escaped, not executed", () => {
   });
 });
 
+describe("map thumbnail", () => {
+  const scoredHours = day(TODAY, [13, 13, 13]);
+
+  test("renders four PDOK tile imgs with inline mosaic offsets", () => {
+    const html = renderConditionsPage({ ...baseArgs, scoredHours });
+    const matches = [...html.matchAll(/<img alt src="(https:\/\/service\.pdok\.nl\/[^"]+)"\/>/g)];
+    assert.equal(matches.length, 4);
+    for (const [, src] of matches) {
+      assert.ok(src!.startsWith("https://service.pdok.nl/brt/achtergrondkaart/wmts/v2_0/standaard/EPSG:3857/12/"));
+    }
+    assert.ok(/<span class="tiles" style="left:-?[\d.]+px;top:-?[\d.]+px;?">/.test(html));
+  });
+
+  test("is closed by default, opens only for a fresh GPS navigation", () => {
+    const closed = renderConditionsPage({ ...baseArgs, scoredHours });
+    assert.ok(closed.includes('data-map="false"'));
+
+    const open = renderConditionsPage({ ...baseArgs, scoredHours, mapOpen: true });
+    assert.ok(open.includes('data-map="true"'));
+  });
+
+  test("escapes an XSS-shaped spot name in the thumbnail's aria-label", () => {
+    const html = renderConditionsPage({
+      ...baseArgs,
+      scoredHours,
+      spot: { name: XSS, lat: 52.2, lon: 5.08, gps: false },
+    });
+    const thumb = html.slice(html.indexOf('id="map-thumb"'));
+    const label = /aria-label="([^"]*)"/.exec(thumb);
+    assert.ok(label, "map-thumb has an aria-label");
+    assert.ok(!label![1]!.includes("<script>"));
+    assert.ok(label![1]!.includes("&lt;script>alert(1)&lt;/script>"));
+  });
+});
+
+describe("map panel", () => {
+  test("renders the DOM contract's map card, hint, name and go-link", () => {
+    const html = renderConditionsPage({ ...baseArgs, scoredHours: day(TODAY, [13, 13, 13]) });
+    assert.ok(html.includes('<div class="map-panel" id="map-panel">'));
+    assert.ok(html.includes('<div class="map" id="map">'));
+    assert.ok(html.includes('Drag the pin or tap the map to pick the exact spot'));
+    assert.ok(html.includes('<a class="map-go" id="map-go" hidden href="#">Use this point</a>'));
+  });
+});
+
 describe("renderConditionsPage", () => {
   test("renders a doctype and the ribbon contract's markup", () => {
     const html = renderConditionsPage({ ...baseArgs, scoredHours: day(TODAY, [13, 13, 13]) });
