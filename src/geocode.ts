@@ -1,7 +1,5 @@
 // Forward and reverse NL geocoding via PDOK's Locatieserver.
-// Forward search uses /suggest (typeahead-tuned ranking), not /free - /free
-// ties every prefix match at the same relevance score, so e.g. "rotter"
-// alphabetically sorted "Botlek Rotterdam" etc. ahead of "Rotterdam" itself.
+// Forward search uses /suggest
 const ENDPOINT = "https://api.pdok.nl/bzk/locatieserver/search/v3_1/suggest";
 const REVERSE_ENDPOINT = "https://api.pdok.nl/bzk/locatieserver/search/v3_1/reverse";
 
