@@ -6,7 +6,7 @@ const ZOOM = 12;
 const THUMB_PX = 56; // the thumbnail's rendered width/height (style.css .map-thumb)
 const TILE_PX = 256;
 
-// The BRT achtergrondkaart standaard WMTS the retired map picker used.
+// The BRT achtergrondkaart standaard WMTS tile source.
 const TILE_URL = (z: number, x: number, y: number): string =>
   `https://service.pdok.nl/brt/achtergrondkaart/wmts/v2_0/standaard/EPSG:3857/${z}/${x}/${y}.png`;
 

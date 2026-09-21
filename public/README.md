@@ -7,6 +7,7 @@ app routes falls through to `env.ASSETS.fetch(request)`, which serves a
 matching file from here by path - e.g. `/style.css` has no app route, so it
 resolves to `public/style.css`.
 
+- `app.js` - the one client-side script, progressively enhancing the server-rendered page: scrubbing a ribbon, the location switcher, the GPS button, saving a spot, chip glance badges, and the map preview's pinpoint panel. Plain ES module, no build step; the page works without it.
 - `style.css` - the site's only stylesheet, everything included (no build step).
 - `fonts/` - self-hosted woff2 subsets, so the site makes no runtime request to Google Fonts.
 

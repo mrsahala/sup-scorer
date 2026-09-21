@@ -54,6 +54,8 @@ describe("fetchForecast", () => {
     assert.equal(hours[2]!.gustKmh, 20);
     assert.equal(hours[2]!.windDirDeg, 225);
     assert.equal(hours[2]!.weatherCode, 0);
+    assert.equal(hours[2]!.sunrise, "06:00");
+    assert.equal(hours[2]!.sunset, "20:00");
 
     assert.equal(calls.length, 1);
   });

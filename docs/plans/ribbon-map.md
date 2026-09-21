@@ -1,5 +1,7 @@
 # Ribbon UX, step 2: map thumbnail and pinpoint panel
 
+**Shipped.** PR9 below has merged.
+
 Follow-on to `docs/plans/ribbon-ux.md`. Start only after PR6 of that plan
 has merged; PR7 and PR8 may run alongside this. Same rules apply: the
 orchestrator hands the PR below to an implementing agent, nothing merges
@@ -22,9 +24,10 @@ separate page or mode:
   Only one of the switcher and the panel is open at a time.
 
 Reference: `prototypes/a-ribbon-map.html`, the Ribbon prototype plus this
-feature. Diff it against `prototypes/a-ribbon.html` to see exactly what
-changed; everything else in that file is identical. (If PR8 has already
-deleted `prototypes/`, check out the branch `ribbon/map-proto`.)
+feature, diffed against `prototypes/a-ribbon.html` to see exactly what
+changed; everything else in that file is identical. `prototypes/` has since
+been deleted (PR8) - the prototypes live on the `ribbon/map-proto` branch if
+anyone needs them.
 
 ## 2. DOM contract additions
 

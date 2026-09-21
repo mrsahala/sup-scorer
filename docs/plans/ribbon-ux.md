@@ -1,5 +1,7 @@
 # Ribbon UX: implementation plan
 
+**Shipped.** All PRs in this plan have merged.
+
 Replaces the live site's landing-page-then-grid flow with the "Ribbon"
 prototype: the site opens straight into conditions for the visitor's spot,
 each day is a horizontal wind ribbon with tier tinting, an inline switcher
@@ -23,6 +25,9 @@ live data and lives in the repo (landed by PR0 below):
 | `prototypes/core.js` | Window detection, day summaries, glance text, chip/cookie semantics. Port logic from here, don't reinvent. |
 | `prototypes/tokens.css` | Color tokens, light and dark. Port verbatim. |
 | `prototypes/README.md` | How to run it: `cd prototypes && python3 -m http.server 8787`, open `a-ribbon.html`. |
+
+(`prototypes/` was deleted once this plan and `ribbon-map.md` shipped; these
+files live on the `ribbon/map-proto` branch.)
 
 "Exact" means: same information, same interaction model, same visual
 system. It does not mean pixel identity with the prototype's SVG geometry;

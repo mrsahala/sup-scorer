@@ -1,9 +1,9 @@
 // One day's wind ribbon: the window strip, the SVG curves, the hour axis and
 // arrows, and the detail strip under it. Markup follows the DOM contract in
 // docs/plans/ribbon-ux.md section 3 exactly - public/style.css and public/app.js
-// are written against it. Geometry is ported from renderRibbon in
-// prototypes/a-ribbon.html, converted from measured pixels to percentages and a
-// fixed viewBox so the ribbon is responsive without any client-side measuring.
+// are written against it. Geometry is ported from renderRibbon in the Ribbon
+// UX prototype, converted from measured pixels to percentages and a fixed
+// viewBox so the ribbon is responsive without any client-side measuring.
 import { Fragment } from "preact";
 import type { ComponentChildren, JSX } from "preact";
 import { t, compassLabel, dateLocale, dayLabel, type Locale } from "./i18n";
@@ -115,13 +115,14 @@ export function interpolate(template: string, nodes: Record<string, ComponentChi
 }
 
 // The ranges shown in the meta line, also used as the ribbon's alt text.
-function metaValues(hours: ScoredHour[]): { wind: string; temp: string; daylight: string } {
+function metaValues(hours: ScoredHour[]): { wind: string; temp: string; sunrise: string; sunset: string } {
   const range = (vals: number[]) =>
     vals.length ? `${Math.round(Math.min(...vals))}–${Math.round(Math.max(...vals))}` : "–";
   return {
     wind: range(hours.map((h) => h.windKmh).filter(Number.isFinite)),
     temp: range(hours.map((h) => h.tempC).filter(Number.isFinite)),
-    daylight: hours.length ? `${hours[0]!.hour}–${hours[hours.length - 1]!.hour}` : "–",
+    sunrise: hours[0]?.sunrise || "–",
+    sunset: hours[0]?.sunset || "–",
   };
 }
 
@@ -411,7 +412,8 @@ export function DayCard({
         {interpolate(t(locale, "metaLine"), {
           wind: <span class="mono">{meta.wind}</span>,
           temp: <span class="mono">{meta.temp}</span>,
-          daylight: <span class="mono">{meta.daylight}</span>,
+          sunrise: <span class="mono">{meta.sunrise}</span>,
+          sunset: <span class="mono">{meta.sunset}</span>,
         })}
       </div>
       <Ribbon

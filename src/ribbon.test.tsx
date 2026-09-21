@@ -23,6 +23,8 @@ function row(date: string, hourNum: number, windKmh: number, extra: Partial<Hour
     windDirDeg: 225,
     weatherCode: 0,
     isDaylight: true,
+    sunrise: "07:23",
+    sunset: "19:40",
     ...extra,
   };
 }
@@ -201,7 +203,7 @@ describe("DayCard", () => {
     assert.ok(html.includes("Today<small>20 Sept</small>"));
     assert.ok(html.includes('<span class="pill tier-good"><i></i>Good <span class="mono">09–14</span></span>'));
     assert.ok(html.includes('wind <span class="mono">8–23</span> km/h'));
-    assert.ok(html.includes('daylight <span class="mono">08:00–19:00</span>'));
+    assert.ok(html.includes('sunrise <span class="mono">07:23</span> · sunset <span class="mono">19:40</span>'));
     assert.doesNotMatch(html, /NaN|Infinity|undefined/);
   });
 
