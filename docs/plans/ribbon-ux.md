@@ -393,6 +393,13 @@ into PR6a (page, no script) and PR6b (script) on the same branch base.
 title row plus an expand-in-place pinpoint panel. Same rules and runbook
 as this plan.
 
+### Step 3 (after PR9)
+
+**PR11–PR13 — Any-country support.** Specified in
+`docs/plans/ribbon-global.md`: timezone-correct "now" (PR11, can run any
+time), global geocoding via Photon with Open-Meteo fallback (PR12), and
+OpenStreetMap raster tiles (PR13). PDOK is retired there.
+
 ### Wave 4 (after PR6; parallel)
 
 **PR7 — Motion and polish.** Branch `ribbon/polish`. SMIL wipe-in on the
@@ -455,6 +462,7 @@ human first.
 ## 8. Out of scope, and questions already answered
 
 - Map "fine-tune" picker: not in this plan. It is step 2, `docs/plans/ribbon-map.md` (PR9), which starts after PR6 merges.
+- Locations outside the Netherlands: not in this plan. It is step 3, `docs/plans/ribbon-global.md` (PR11–PR13), after PR9.
 - Client-side spot switching without navigation: out. Cross-document view transitions cover the feel.
 - Accounts or server-side saved spots: out. Cookies only.
 - Chip badges for more than 8 spots: out; the store caps at 8.
