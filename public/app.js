@@ -255,7 +255,7 @@ function wireSwitcher(page) {
   const search = async (q) => {
     const mine = ++seq;
     try {
-      const resp = await fetch(`/api/search?q=${encodeURIComponent(q)}`);
+      const resp = await fetch(`/api/search?q=${encodeURIComponent(q)}&lang=${page.locale}`);
       if (!resp.ok) throw new Error(String(resp.status));
       const body = await resp.json();
       if (mine !== seq) return;
@@ -361,7 +361,7 @@ function wireMapPanel(page) {
     nameEl.textContent = "…";
     let name = page.strings.pickedPoint;
     try {
-      const resp = await fetch(`/api/reverse?lat=${lat}&lon=${lon}`);
+      const resp = await fetch(`/api/reverse?lat=${lat}&lon=${lon}&lang=${page.locale}`);
       const body = resp.ok ? await resp.json() : null;
       if (body && typeof body.name === "string" && body.name) name = body.name;
     } catch {

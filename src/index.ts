@@ -42,6 +42,14 @@ async function computeScoredHours({
   return { scoredHours: hours.map(scoreHour), timezone };
 }
 
+// The visitor's country (ISO alpha-2) from Cloudflare, for the "append the
+// country only when foreign" rule in placename.ts. Null when unknown.
+function viewerCountryFrom(request: Request): string | null {
+  const cf = request.cf as IncomingRequestCfProperties | undefined;
+  const country = cf?.country;
+  return typeof country === "string" && country.length === 2 ? country.toUpperCase() : null;
+}
+
 // Cloudflare resolves each request's approximate lat/lon (and city) from the client IP on request.cf - free, no extra request needed.
 function ipLocationFrom(request: Request): { lat: number; lon: number; name: string | null } | null {
   const cf = request.cf as IncomingRequestCfProperties | undefined;
@@ -84,12 +92,13 @@ async function handleAppRoute(
   const search = url.search;
   const cookieHeader = request.headers.get("Cookie");
   const savedSpots = parseSdSpots(cookieHeader);
+  const geo = { locale, viewerCountry: viewerCountryFrom(request) };
 
   if (path === "/") {
     const spot = resolveStartingSpot(cookieHeader, ipLocation);
     const [{ scoredHours, timezone }, resolvedName] = await Promise.all([
       computeScoredHours({ lat: spot.lat, lon: spot.lon }),
-      spot.name ? Promise.resolve(spot.name) : reverseGeocode(spot.lat, spot.lon),
+      spot.name ? Promise.resolve(spot.name) : reverseGeocode(spot.lat, spot.lon, geo),
     ]);
     const name = resolvedName || t(locale, "myLocation");
     return html(
@@ -115,12 +124,12 @@ async function handleAppRoute(
     const gps = url.searchParams.get("src") === "gps";
     // A "name" is only ever missing when the GPS button linked here directly
     // with raw coordinates (search results always pass one, already
-    // resolved by PDOK's forward lookup) - reverse-geocode a label for that
+    // resolved by the forward lookup) - reverse-geocode a label for that
     // case, alongside the forecast fetch rather than after it.
     const paramName = url.searchParams.get("name");
     const [{ scoredHours, timezone }, resolvedName] = await Promise.all([
       computeScoredHours({ lat, lon }),
-      paramName ? Promise.resolve(paramName) : reverseGeocode(lat, lon),
+      paramName ? Promise.resolve(paramName) : reverseGeocode(lat, lon, geo),
     ]);
     const name = resolvedName || t(locale, "myLocation");
     const response = html(
@@ -219,12 +228,16 @@ async function handleGlanceRoute(url: URL, ctx: ExecutionContext): Promise<Respo
 }
 
 // JSON APIs used by the switcher's client-side script and the chip glance badges.
-async function handleApiRoute(path: string, url: URL, ctx: ExecutionContext): Promise<Response> {
+// `lang` picks the UI locale for names and labels; the visitor's country comes from Cloudflare.
+async function handleApiRoute(path: string, url: URL, ctx: ExecutionContext, request: Request): Promise<Response> {
+  const langParam = url.searchParams.get("lang");
+  const geo = { locale: isLocale(langParam) ? langParam : DEFAULT_LOCALE, viewerCountry: viewerCountryFrom(request) };
+
   if (path === "/api/search") {
     const query = (url.searchParams.get("q") || "").trim();
     if (!query) return Response.json([]);
     try {
-      return Response.json(await searchLocation(query));
+      return Response.json(await searchLocation(query, geo));
     } catch {
       return Response.json([], { status: 502 });
     }
@@ -236,7 +249,7 @@ async function handleApiRoute(path: string, url: URL, ctx: ExecutionContext): Pr
     if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
       return Response.json({ name: null }, { status: 400 });
     }
-    return Response.json({ name: await reverseGeocode(lat, lon) });
+    return Response.json({ name: await reverseGeocode(lat, lon, geo) });
   }
 
   if (path === "/api/glance") {
@@ -253,7 +266,7 @@ export default {
     const path = url.pathname;
 
     if (path.startsWith("/api/")) {
-      return handleApiRoute(path, url, ctx);
+      return handleApiRoute(path, url, ctx, request);
     }
 
     // Bare root has no canonical locale - redirect (never serve content
