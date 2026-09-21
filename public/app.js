@@ -319,8 +319,8 @@ function wireSwitcher(page) {
 
 const LEAFLET_ZOOM = 14;
 const MAP_OPEN_DELAY_MS = 240; // 20ms after .map-panel's 220ms grid-rows expand finishes (style.css)
-const LEAFLET_CSS = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
-const LEAFLET_JS = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
+const LEAFLET_CSS = "/leaflet/leaflet.css";
+const LEAFLET_JS = "/leaflet/leaflet.js";
 const TILE_URL = (z, x, y) => `https://service.pdok.nl/brt/achtergrondkaart/wmts/v2_0/standaard/EPSG:3857/${z}/${x}/${y}.png`;
 const PIN_SVG =
   '<svg width="26" height="26" viewBox="0 0 26 26" xmlns="http://www.w3.org/2000/svg"><path d="M13 2C8.6 2 5 5.5 5 9.8c0 6 8 14 8 14s8-8 8-14C21 5.5 17.4 2 13 2z" fill="#e0693f" stroke="#fff" stroke-width="1.5"/><circle cx="13" cy="9.8" r="3.2" fill="#fff"/></svg>';

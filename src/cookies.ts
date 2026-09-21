@@ -5,9 +5,12 @@
 const SD_LAST = "sd_last";
 const SD_SPOTS = "sd_spots";
 const MAX_SPOTS = 8;
-const ONE_YEAR_SECONDS = 60 * 60 * 24 * 365;
+const NINETY_DAYS_SECONDS = 60 * 60 * 24 * 90;
 
-// sd_last: set by the server on every /conditions response.
+// sd_last: set by the server on a /conditions response, but only for a
+// visitor who has already starred a spot (see index.ts) - the star is the
+// explicit "remember me" that makes a persistent preference cookie exempt
+// from consent.
 export interface SdLast {
   name: string;
   lat: number;
@@ -86,10 +89,10 @@ export function parseSdSpots(cookieHeader: string | null): SdSpot[] {
   }
 }
 
-// Set-Cookie value for sd_last - 1 year, Secure unless localhost (browsers reject it over plain http).
+// Set-Cookie value for sd_last - 90 days, Secure unless localhost (browsers reject it over plain http).
 export function serializeSdLast(value: SdLast, { secure }: { secure: boolean }): string {
   const encoded = encodeURIComponent(JSON.stringify(value));
-  const attrs = [`${SD_LAST}=${encoded}`, `Max-Age=${ONE_YEAR_SECONDS}`, "Path=/", "SameSite=Lax"];
+  const attrs = [`${SD_LAST}=${encoded}`, `Max-Age=${NINETY_DAYS_SECONDS}`, "Path=/", "SameSite=Lax"];
   if (secure) attrs.push("Secure");
   return attrs.join("; ");
 }

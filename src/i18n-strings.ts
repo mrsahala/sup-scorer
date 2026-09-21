@@ -17,9 +17,9 @@ export const COMPASS: Record<Locale, [string, string, string, string, string, st
 // compile-time error, not a silent runtime fallback.
 const EN = {
   siteTitleSpot: "supdawg — {location} SUP conditions",
-  siteTitleAttribution: "supdawg — data attribution",
+  siteTitleAttribution: "supdawg — data & privacy",
   subtitleSpot: "SUP conditions for {location}",
-  subtitleAttribution: "Where the data comes from",
+  subtitleAttribution: "Where the data comes from, what the site stores, and what it can't promise",
   noForecast: "No forecast data available.",
   backHome: "← back",
   searchPlaceholder: "Search any place in the Netherlands",
@@ -61,7 +61,7 @@ const EN = {
   mapHint: "Drag the pin or tap the map to pick the exact spot",
   useThisPoint: "Use this point",
   pickedPoint: "Picked point",
-  dataAttribution: "Data attribution",
+  dataAttribution: "Data & privacy",
   tierGreat: "Great",
   tierGood: "Good",
   tierMarginal: "OK",
@@ -76,6 +76,22 @@ const EN = {
   attrScoringHeading: "Scoring logic",
   attrScoringBody:
     "The site's code is open source (MIT licensed) - see the {repoLink}.",
+  attrTilesBody:
+    "Map images are loaded by your browser directly from {pdokLink} (Kadaster), which therefore sees your IP address, as it would for any website's images.",
+  privLocationHeading: "Your location",
+  privLocationBody:
+    "On your first visit the site uses the approximate location that comes with your internet connection to open on a nearby spot. It is used once to render that page and is not stored. The \"use my location\" button asks your browser for a precise position; that only happens when you press it.",
+  privStorageHeading: "What this site stores in your browser",
+  privStorageBody:
+    "Nothing, until you press the star. Starring a spot saves it in a small cookie in your browser (<code>sd_spots</code>) so the chip row can show it again; once you have a saved spot the site also remembers the last spot you viewed (<code>sd_last</code>) so it opens there next time. Both stay in your browser for up to 90 days, are never sent anywhere except back to this site to render your page, and disappear when you unstar every spot or clear cookies. There are no analytics, no tracking, no accounts and no third-party scripts.",
+  privAboutHeading: "About this site",
+  privAboutBody:
+    "supdawg is a free, non-commercial hobby project run by {owner}, reachable at {contact}. The source code is on {repoLink}.",
+  privDisclaimerHeading: "No guarantee",
+  privDisclaimerBody:
+    "The verdicts on this site are computed from a public weather forecast using fixed thresholds. Forecasts are uncertain, conditions on open water can differ from the forecast at any moment, and this site cannot know your skill, your board or the water you are on. Use it as one input, not as a decision. You are responsible for your own safety; check official warnings from KNMI before going out.",
+  footerDisclaimer: "Forecasts, not guarantees. Check conditions on the water yourself.",
+  savedInBrowser: "Saved in this browser only.",
 } as const;
 
 // The set of translatable keys, and the shape every locale's dictionary
@@ -86,9 +102,9 @@ export type Dictionary = Record<StringKey, string>;
 
 const NL: Dictionary = {
   siteTitleSpot: "supdawg — SUP-omstandigheden {location}",
-  siteTitleAttribution: "supdawg — gegevensbronnen",
+  siteTitleAttribution: "supdawg — gegevens & privacy",
   subtitleSpot: "SUP-omstandigheden voor {location}",
-  subtitleAttribution: "Waar de gegevens vandaan komen",
+  subtitleAttribution: "Waar de gegevens vandaan komen, wat de site bewaart en wat hij niet kan beloven",
   noForecast: "Geen voorspellingsgegevens beschikbaar.",
   backHome: "← terug",
   searchPlaceholder: "Zoek een plek in Nederland",
@@ -130,7 +146,7 @@ const NL: Dictionary = {
   mapHint: "Versleep de pin of tik op de kaart voor de precieze plek",
   useThisPoint: "Gebruik dit punt",
   pickedPoint: "Gekozen punt",
-  dataAttribution: "Gegevensbronnen",
+  dataAttribution: "Gegevens & privacy",
   tierGreat: "Geweldig",
   tierGood: "Goed",
   tierMarginal: "Matig",
@@ -145,13 +161,29 @@ const NL: Dictionary = {
   attrScoringHeading: "Scorelogica",
   attrScoringBody:
     "De code van deze site is open source (MIT-licentie) - zie de {repoLink}.",
+  attrTilesBody:
+    "Kaartbeelden laadt je browser rechtstreeks van {pdokLink} (Kadaster), dat daardoor je IP-adres ziet, net als bij de afbeeldingen van elke andere website.",
+  privLocationHeading: "Je locatie",
+  privLocationBody:
+    "Bij je eerste bezoek gebruikt de site de globale locatie die bij je internetverbinding hoort om te openen op een plek in de buurt. Die wordt één keer gebruikt om die pagina te maken en niet bewaard. De knop \"mijn locatie\" vraagt je browser om een precieze positie; dat gebeurt alleen als je erop drukt.",
+  privStorageHeading: "Wat deze site in je browser bewaart",
+  privStorageBody:
+    "Niets, totdat je op de ster drukt. Een plek opslaan zet hem in een klein cookie in je browser (<code>sd_spots</code>), zodat de rij met plekken hem opnieuw kan tonen; zodra je een opgeslagen plek hebt, onthoudt de site ook de laatst bekeken plek (<code>sd_last</code>) zodat hij daar de volgende keer op opent. Beide blijven maximaal 90 dagen in je browser, worden nergens anders heen gestuurd dan terug naar deze site om je pagina te maken, en verdwijnen als je alle plekken weer uit je lijst haalt of je cookies wist. Er is geen analytics, geen tracking, geen account en geen script van derden.",
+  privAboutHeading: "Over deze site",
+  privAboutBody:
+    "supdawg is een gratis, niet-commercieel hobbyproject van {owner}, bereikbaar via {contact}. De broncode staat op {repoLink}.",
+  privDisclaimerHeading: "Geen garantie",
+  privDisclaimerBody:
+    "De oordelen op deze site worden berekend uit een openbare weersverwachting met vaste drempels. Verwachtingen zijn onzeker, de omstandigheden op open water kunnen op elk moment afwijken, en deze site kent je ervaring, je board of het water waarop je vaart niet. Gebruik hem als één van je bronnen, niet als beslissing. Je bent zelf verantwoordelijk voor je veiligheid; check de officiële waarschuwingen van het KNMI voordat je het water op gaat.",
+  footerDisclaimer: "Verwachtingen, geen garanties. Beoordeel de omstandigheden op het water zelf.",
+  savedInBrowser: "Alleen in deze browser opgeslagen.",
 };
 
 const DE: Dictionary = {
   siteTitleSpot: "supdawg — SUP-Bedingungen {location}",
-  siteTitleAttribution: "supdawg — Datenquellen",
+  siteTitleAttribution: "supdawg — Daten & Datenschutz",
   subtitleSpot: "SUP-Bedingungen für {location}",
-  subtitleAttribution: "Woher die Daten stammen",
+  subtitleAttribution: "Woher die Daten stammen, was die Seite speichert und was sie nicht versprechen kann",
   noForecast: "Keine Vorhersagedaten verfügbar.",
   backHome: "← zurück",
   searchPlaceholder: "Beliebigen Ort in den Niederlanden suchen",
@@ -193,7 +225,7 @@ const DE: Dictionary = {
   mapHint: "Ziehe die Nadel oder tippe auf die Karte für den genauen Ort",
   useThisPoint: "Diesen Punkt verwenden",
   pickedPoint: "Gewählter Punkt",
-  dataAttribution: "Datenquellen",
+  dataAttribution: "Daten & Datenschutz",
   tierGreat: "Spitze",
   tierGood: "Gut",
   tierMarginal: "Mäßig",
@@ -208,6 +240,22 @@ const DE: Dictionary = {
   attrScoringHeading: "Bewertungslogik",
   attrScoringBody:
     "Der Code dieser Seite ist Open Source (MIT-Lizenz) - siehe das {repoLink}.",
+  attrTilesBody:
+    "Kartenbilder lädt dein Browser direkt von {pdokLink} (Kadaster), das dadurch deine IP-Adresse sieht, wie bei den Bildern jeder anderen Website auch.",
+  privLocationHeading: "Dein Standort",
+  privLocationBody:
+    "Beim ersten Besuch nutzt die Seite den ungefähren Standort, der zu deiner Internetverbindung gehört, um einen Ort in der Nähe zu öffnen. Er wird einmal zum Aufbau dieser Seite verwendet und nicht gespeichert. Der Knopf \"meinen Standort verwenden\" fragt deinen Browser nach einer genauen Position; das passiert nur, wenn du ihn drückst.",
+  privStorageHeading: "Was diese Seite in deinem Browser speichert",
+  privStorageBody:
+    "Nichts, bis du auf den Stern drückst. Einen Ort zu speichern legt ihn in einem kleinen Cookie in deinem Browser ab (<code>sd_spots</code>), damit die Ortsleiste ihn wieder anzeigen kann; sobald du einen gespeicherten Ort hast, merkt sich die Seite auch den zuletzt angesehenen Ort (<code>sd_last</code>), um beim nächsten Mal dort zu öffnen. Beide bleiben höchstens 90 Tage in deinem Browser, werden nirgendwohin gesendet außer zurück an diese Seite zum Aufbau deiner Seite, und verschwinden, wenn du alle Orte wieder entfernst oder deine Cookies löschst. Es gibt keine Analyse, kein Tracking, keine Konten und keine Skripte Dritter.",
+  privAboutHeading: "Über diese Seite",
+  privAboutBody:
+    "supdawg ist ein kostenloses, nicht-kommerzielles Hobbyprojekt von {owner}, erreichbar unter {contact}. Der Quellcode liegt auf {repoLink}.",
+  privDisclaimerHeading: "Keine Garantie",
+  privDisclaimerBody:
+    "Die Bewertungen auf dieser Seite werden aus einer öffentlichen Wettervorhersage mit festen Schwellenwerten berechnet. Vorhersagen sind unsicher, die Bedingungen auf offenem Wasser können jederzeit davon abweichen, und diese Seite kennt weder dein Können noch dein Board oder das Gewässer. Nutze sie als einen Anhaltspunkt, nicht als Entscheidung. Du bist selbst für deine Sicherheit verantwortlich; prüfe vor dem Rausfahren die amtlichen Warnungen (in den Niederlanden: KNMI).",
+  footerDisclaimer: "Vorhersagen, keine Garantien. Beurteile die Bedingungen auf dem Wasser selbst.",
+  savedInBrowser: "Nur in diesem Browser gespeichert.",
 };
 
 export const STRINGS: Record<Locale, Dictionary> = { en: EN, nl: NL, de: DE };
