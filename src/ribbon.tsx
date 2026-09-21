@@ -1,9 +1,9 @@
 // One day's wind ribbon: the window strip, the SVG curves, the hour axis and
 // arrows, and the detail strip under it. Markup follows the DOM contract in
 // docs/plans/ribbon-ux.md section 3 exactly - public/style.css and public/app.js
-// are written against it. Geometry is ported from renderRibbon in
-// prototypes/a-ribbon.html, converted from measured pixels to percentages and a
-// fixed viewBox so the ribbon is responsive without any client-side measuring.
+// are written against it. Geometry is ported from renderRibbon in the Ribbon
+// UX prototype, converted from measured pixels to percentages and a fixed
+// viewBox so the ribbon is responsive without any client-side measuring.
 import { Fragment } from "preact";
 import type { ComponentChildren, JSX } from "preact";
 import { t, compassLabel, dateLocale, dayLabel, type Locale } from "./i18n";

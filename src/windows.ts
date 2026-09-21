@@ -1,5 +1,5 @@
 // Detects contiguous "go paddle" windows and summarizes a day/lookahead from scored hours.
-// Semantics ported 1:1 from prototypes/core.js (findWindows/daySummary) and a-ribbon.html (glance); groupByDate moved here from render.tsx.
+// Semantics ported 1:1 from the Ribbon UX prototype (findWindows/daySummary/glance); groupByDate moved here from render.tsx.
 import { TIER_NAMES, type ScoredHour } from "./scoring";
 import type { Tier } from "./config";
 
