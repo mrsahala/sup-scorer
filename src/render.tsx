@@ -506,10 +506,14 @@ export function renderConditionsPage({
   mapOpen = false,
   savedSpots = [],
   now = new Date(),
+  timezone = LOCATION.timezone,
 }: {
   locale: Locale;
   spot: PageSpot;
   scoredHours: ScoredHour[];
+  // IANA zone the hour rows are in (from the forecast), so "today" and the
+  // now marker follow the spot, not the Worker's clock.
+  timezone?: string;
   currentPath: string;
   search: string;
   switcherOpen?: boolean;
@@ -520,7 +524,7 @@ export function renderConditionsPage({
   savedSpots?: SdSpot[];
   now?: Date;
 }): string {
-  const clock = localNow(now, LOCATION.timezone);
+  const clock = localNow(now, timezone);
   const days = buildDays(scoredHours, clock.date, clock.hour);
   const saved = savedSpots.some((s) => sameSpot(s, spot));
 
