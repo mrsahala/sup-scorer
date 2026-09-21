@@ -27,13 +27,20 @@ export interface HourRow {
   // groupByDate filter - just reads a boolean instead of each re-deriving
   // it from a sunrise/sunset lookup.
   isDaylight: boolean;
+  // That day's actual sunrise/sunset as "HH:MM" local time, for display -
+  // isDaylight is hour-granular, these are what the visitor sees.
+  sunrise: string;
+  sunset: string;
 }
 
-// One day's sunrise/sunset instants - only used internally, to compute
-// each HourRow's isDaylight; not part of this module's public return value.
+// One day's sunrise/sunset - only used internally, to compute each
+// HourRow's isDaylight and carry the display times; not part of this
+// module's public return value.
 interface DaylightWindow {
   sunrise: Date;
   sunset: Date;
+  sunriseHm: string;
+  sunsetHm: string;
 }
 
 // fetchForecast's return value.
@@ -122,6 +129,8 @@ export async function fetchForecast({
     daylightByDate.set(date, {
       sunrise: new Date(data.daily.sunrise[i]!),
       sunset: new Date(data.daily.sunset[i]!),
+      sunriseHm: data.daily.sunrise[i]!.slice(11, 16),
+      sunsetHm: data.daily.sunset[i]!.slice(11, 16),
     });
   });
 
@@ -142,6 +151,8 @@ export async function fetchForecast({
       windDirDeg: h.winddirection_10m[i]!,
       weatherCode: h.weathercode[i]!,
       isDaylight,
+      sunrise: window?.sunriseHm ?? "",
+      sunset: window?.sunsetHm ?? "",
     };
   });
 
