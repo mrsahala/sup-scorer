@@ -6,8 +6,9 @@
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
-    "test": "node --import tsx --test src/**/*.test.ts src/**/*.test.tsx",
+    "test": "node --import tsx --test $(find src -name '*.test.ts' -o -name '*.test.tsx')",
     "typecheck": "tsc --noEmit",
+    "smoke": "node scripts/smoke.mjs",
     "cf-typegen": "wrangler types"
   },
   "engines": {
