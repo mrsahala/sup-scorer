@@ -15,6 +15,8 @@ function row(overrides: Partial<HourRow> = {}): HourRow {
     windDirDeg: 0,
     weatherCode: 0,
     isDaylight: true,
+    sunrise: "06:00",
+    sunset: "20:00",
     ...overrides,
   };
 }

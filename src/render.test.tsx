@@ -33,6 +33,8 @@ function row(date: string, hourNum: number, windKmh: number): HourRow {
     windDirDeg: 225,
     weatherCode: 0,
     isDaylight: true,
+    sunrise: "07:23",
+    sunset: "19:40",
   };
 }
 
