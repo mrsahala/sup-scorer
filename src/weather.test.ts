@@ -105,7 +105,7 @@ describe("fetchForecast", () => {
     assert.equal(init.cf?.cacheEverything, true);
   });
 
-  test("defaults to config.ts's LOCATION/LOOKAHEAD_DAYS when called with no args", async (t) => {
+  test("defaults to timezone=auto and config.ts's LOCATION/LOOKAHEAD_DAYS when called with no args", async (t) => {
     const calls = mockFetch(t, [
       { match: (url) => url.includes("api.open-meteo.com"), respond: () => ({ status: 200, json: fixture() }) },
     ]);
@@ -113,8 +113,29 @@ describe("fetchForecast", () => {
     await fetchForecast();
 
     const url = new URL(calls[0]!.url);
-    assert.equal(url.searchParams.get("timezone"), "Europe/Amsterdam");
+    assert.equal(url.searchParams.get("timezone"), "auto");
     assert.ok(Number(url.searchParams.get("forecast_days")) > 0);
+  });
+
+  test("returns the timezone Open-Meteo resolved for the point", async (t) => {
+    mockFetch(t, [
+      {
+        match: (url) => url.includes("api.open-meteo.com"),
+        respond: () => ({ status: 200, json: { ...fixture(), timezone: "Asia/Tokyo", utc_offset_seconds: 32400 } }),
+      },
+    ]);
+
+    const { timezone } = await fetchForecast({ lat: 35.7, lon: 139.7 });
+    assert.equal(timezone, "Asia/Tokyo");
+  });
+
+  test("without a timezone in the response, falls back to the requested zone, then LOCATION's", async (t) => {
+    mockFetch(t, [
+      { match: (url) => url.includes("api.open-meteo.com"), respond: () => ({ status: 200, json: fixture() }) },
+    ]);
+
+    assert.equal((await fetchForecast({ timezone: "Europe/Lisbon" })).timezone, "Europe/Lisbon");
+    assert.equal((await fetchForecast()).timezone, "Europe/Amsterdam");
   });
 
   test("throws an OpenMeteoError with status/body as real properties, not just in the message", async (t) => {

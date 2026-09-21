@@ -29,9 +29,17 @@ const DEFAULT_SPOT_NAME = "Amsterdamse Bos";
 
 const html = (body: string) => new Response(body, { headers: { "content-type": "text/html; charset=utf-8" } });
 
-async function computeScoredHours({ lat, lon }: { lat: number; lon: number }): Promise<ScoredHour[]> {
-  const { hours } = await fetchForecast({ lat, lon, timezone: LOCATION.timezone });
-  return hours.map(scoreHour);
+// The forecast's timezone travels with the hours: "today" and the now marker
+// are computed in the spot's own zone, not the Worker's (UTC) or Amsterdam's.
+async function computeScoredHours({
+  lat,
+  lon,
+}: {
+  lat: number;
+  lon: number;
+}): Promise<{ scoredHours: ScoredHour[]; timezone: string }> {
+  const { hours, timezone } = await fetchForecast({ lat, lon });
+  return { scoredHours: hours.map(scoreHour), timezone };
 }
 
 // Cloudflare resolves each request's approximate lat/lon (and city) from the client IP on request.cf - free, no extra request needed.
@@ -79,7 +87,7 @@ async function handleAppRoute(
 
   if (path === "/") {
     const spot = resolveStartingSpot(cookieHeader, ipLocation);
-    const [scoredHours, resolvedName] = await Promise.all([
+    const [{ scoredHours, timezone }, resolvedName] = await Promise.all([
       computeScoredHours({ lat: spot.lat, lon: spot.lon }),
       spot.name ? Promise.resolve(spot.name) : reverseGeocode(spot.lat, spot.lon),
     ]);
@@ -89,6 +97,7 @@ async function handleAppRoute(
         locale,
         spot: { name, lat: spot.lat, lon: spot.lon, gps: spot.gps },
         scoredHours,
+        timezone,
         currentPath,
         search,
         switcherOpen: spot.switcherOpen,
@@ -109,7 +118,7 @@ async function handleAppRoute(
     // resolved by PDOK's forward lookup) - reverse-geocode a label for that
     // case, alongside the forecast fetch rather than after it.
     const paramName = url.searchParams.get("name");
-    const [scoredHours, resolvedName] = await Promise.all([
+    const [{ scoredHours, timezone }, resolvedName] = await Promise.all([
       computeScoredHours({ lat, lon }),
       paramName ? Promise.resolve(paramName) : reverseGeocode(lat, lon),
     ]);
@@ -119,6 +128,7 @@ async function handleAppRoute(
         locale,
         spot: { name, lat, lon, gps },
         scoredHours,
+        timezone,
         currentPath,
         search,
         // Open the panel only for this fresh GPS navigation, not whenever a
@@ -153,7 +163,7 @@ function isLocale(value: string | null): value is Locale {
 
 // Chip badge text - see docs/plans/ribbon-ux.md section 4 / prototype's glance() for the text rules.
 async function buildGlance(lat: number, lon: number, locale: Locale): Promise<{ tier: Tier | null; text: string }> {
-  const scoredHours = await computeScoredHours({ lat, lon });
+  const { scoredHours } = await computeScoredHours({ lat, lon });
   const days = groupByDate(scoredHours);
   const g = glance(days.map((d) => d.hours));
   if (g.dayIndex === null) {
