@@ -6,7 +6,7 @@
 // docs/plans/ribbon-ux.md section 3, which public/style.css is written against.
 //
 // JSX auto-escapes every text child and attribute value, so dynamic values
-// (spot names, PDOK results) need no manual escaping. There are two
+// (spot names, geocoder results) need no manual escaping. There are two
 // dangerouslySetInnerHTML exceptions, both with values that never come from a
 // request: the attribution page's link-bearing sentences, and the #page-data
 // blob, whose JSON is escaped by pageDataJson instead of by JSX.
@@ -43,7 +43,7 @@ const SPOT_EPSILON = 1e-4;
 const sameSpot = (a: { lat: number; lon: number }, b: { lat: number; lon: number }): boolean =>
   Math.abs(a.lat - b.lat) < SPOT_EPSILON && Math.abs(a.lon - b.lon) < SPOT_EPSILON;
 
-// PDOK names are "Street, City, Province"; the title and chips want the head of that.
+// Geocoder names are "Place, Region[, Country]"; the title and chips want the head of that.
 const shortName = (name: string): string => name.split(",")[0]!.trim();
 
 const pad2 = (v: number) => String(v).padStart(2, "0");
@@ -478,7 +478,7 @@ function Layout({
           </div>
         </header>
         <main>{children}</main>
-        {/* Links to the attribution page, required by Open-Meteo/PDOK's license terms. */}
+        {/* Links to the attribution page, required by Open-Meteo's and OpenStreetMap's license terms. */}
         <footer class="site-footer">
           <a href={localizedUrl(locale, "/attribution", "")}>{t(locale, "dataAttribution")}</a>
         </footer>
@@ -576,7 +576,7 @@ export function renderConditionsPage({
 // already embedded as raw HTML (built by i18n.ts's t() via plain
 // placeholder substitution, not escaped). dangerouslySetInnerHTML is safe
 // here specifically because every value substituted into those sentences
-// (openMeteoLink/licenseLink/pdokLink/repoLink below) is a
+// (openMeteoLink/licenseLink/photonLink/osmLink/repoLink below) is a
 // hardcoded constant in this file, never anything from a request - unlike
 // every other dynamic value on this page, which flows through normal JSX
 // children and gets auto-escaped.
@@ -601,7 +601,8 @@ export function renderAttributionPage({
 }): string {
   const openMeteoLink = `<a href="https://open-meteo.com/" rel="noopener">Open-Meteo</a>`;
   const licenseLink = `<a href="https://creativecommons.org/licenses/by/4.0/" rel="noopener">CC BY 4.0</a>`;
-  const pdokLink = `<a href="https://www.pdok.nl/" rel="noopener">PDOK</a>`;
+  const photonLink = `<a href="https://photon.komoot.io/" rel="noopener">Photon</a>`;
+  const osmLink = `<a href="https://www.openstreetmap.org/copyright" rel="noopener">OpenStreetMap</a>`;
   const repoLink = `<a href="https://github.com/mrsahala/sup-scorer" rel="noopener">GitHub repository</a>`;
 
   return (
@@ -615,7 +616,7 @@ export function renderAttributionPage({
         />
         <AttributionSection
           heading={t(locale, "attrLocationHeading")}
-          bodyHtml={t(locale, "attrLocationBody", { pdokLink })}
+          bodyHtml={t(locale, "attrLocationBody", { photonLink, osmLink, openMeteoLink })}
         />
         <AttributionSection
           heading={t(locale, "attrScoringHeading")}
