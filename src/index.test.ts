@@ -75,8 +75,11 @@ describe("/{locale}/ spot resolution order", () => {
   });
 });
 
+// A visitor who has starred a spot: the only case in which sd_last is set.
+const SAVED = `sd_spots=${encodeURIComponent(JSON.stringify([{ name: "Zandvoort", lat: 52.37, lon: 4.53 }]))}`;
+
 describe("/{locale}/conditions - sd_last cookie round-trip", () => {
-  test("sets sd_last on every response", async (t) => {
+  test("no sd_last without a saved spot", async (t) => {
     mockFetch(t, [openMeteoRoute()]);
 
     const res = await worker.fetch(
@@ -84,11 +87,23 @@ describe("/{locale}/conditions - sd_last cookie round-trip", () => {
       env,
       ctx
     );
+    assert.equal(res.status, 200);
+    assert.equal(res.headers.get("Set-Cookie"), null);
+  });
+
+  test("sets sd_last for a visitor with a saved spot, for 90 days", async (t) => {
+    mockFetch(t, [openMeteoRoute()]);
+
+    const res = await worker.fetch(
+      req("https://supdawg.nl/en/conditions?lat=52.2&lon=5.08&name=Loosdrecht", { cookie: SAVED }),
+      env,
+      ctx
+    );
     const setCookie = res.headers.get("Set-Cookie");
 
     assert.ok(setCookie);
     assert.match(setCookie!, /^sd_last=/);
-    assert.match(setCookie!, /Max-Age=31536000/);
+    assert.match(setCookie!, /Max-Age=7776000/);
     assert.match(setCookie!, /Secure/);
 
     const raw = decodeURIComponent(setCookie!.split(";")[0]!.slice("sd_last=".length));
@@ -99,7 +114,7 @@ describe("/{locale}/conditions - sd_last cookie round-trip", () => {
     mockFetch(t, [openMeteoRoute()]);
 
     const res = await worker.fetch(
-      req("https://supdawg.nl/en/conditions?lat=52.2&lon=5.08&name=X&src=gps"),
+      req("https://supdawg.nl/en/conditions?lat=52.2&lon=5.08&name=X&src=gps", { cookie: SAVED }),
       env,
       ctx
     );
@@ -111,7 +126,7 @@ describe("/{locale}/conditions - sd_last cookie round-trip", () => {
     mockFetch(t, [openMeteoRoute()]);
 
     const res = await worker.fetch(
-      req("http://localhost:8787/en/conditions?lat=52.2&lon=5.08&name=X"),
+      req("http://localhost:8787/en/conditions?lat=52.2&lon=5.08&name=X", { cookie: SAVED }),
       env,
       ctx
     );
@@ -121,7 +136,7 @@ describe("/{locale}/conditions - sd_last cookie round-trip", () => {
   test("a round-tripped sd_last cookie resolves '/{locale}/' back to the same spot", async (t) => {
     mockFetch(t, [openMeteoRoute()]);
     const first = await worker.fetch(
-      req("https://supdawg.nl/en/conditions?lat=52.2&lon=5.08&name=Loosdrecht"),
+      req("https://supdawg.nl/en/conditions?lat=52.2&lon=5.08&name=Loosdrecht", { cookie: SAVED }),
       env,
       ctx
     );

@@ -137,7 +137,11 @@ async function handleAppRoute(
         savedSpots,
       })
     );
-    response.headers.append("Set-Cookie", serializeSdLast({ name, lat, lon, gps }, { secure: !isLocalhost(url) }));
+    // Remember the spot only for visitors who have starred one: that press is
+    // the explicit opt-in that lets a persistent preference cookie skip consent.
+    if (savedSpots.length > 0) {
+      response.headers.append("Set-Cookie", serializeSdLast({ name, lat, lon, gps }, { secure: !isLocalhost(url) }));
+    }
     return response;
   }
 

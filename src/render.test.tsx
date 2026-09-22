@@ -292,4 +292,37 @@ describe("renderAttributionPage", () => {
     const html = renderAttributionPage({ locale: "en", currentPath: "/attribution", search: "" });
     assert.ok(!html.includes("page-data"));
   });
+
+  test("has the privacy, about and no-guarantee sections in every locale", () => {
+    const expected = {
+      en: ["Your location", "What this site stores in your browser", "About this site", "No guarantee"],
+      nl: ["Je locatie", "Wat deze site in je browser bewaart", "Over deze site", "Geen garantie"],
+      de: ["Dein Standort", "Was diese Seite in deinem Browser speichert", "Über diese Seite", "Keine Garantie"],
+    } as const;
+    for (const [locale, headings] of Object.entries(expected)) {
+      const html = renderAttributionPage({ locale: locale as "en" | "nl" | "de", currentPath: "/attribution", search: "" });
+      for (const h of headings) assert.ok(html.includes(`<h2>${h}</h2>`), `${locale}: ${h}`);
+      assert.ok(html.includes("<code>sd_spots</code>"), `${locale}: cookie named`);
+    }
+  });
+});
+
+describe("footer disclaimer", () => {
+  test("appears on the conditions page and the attribution page", () => {
+    const conditions = renderConditionsPage({ ...baseArgs, scoredHours: day(TODAY, [8, 8]) });
+    const attribution = renderAttributionPage({ locale: "en", currentPath: "/attribution", search: "" });
+    for (const html of [conditions, attribution]) {
+      assert.ok(html.includes('<p class="disclaimer">Forecasts, not guarantees. Check conditions on the water yourself.</p>'));
+      assert.ok(html.includes(">Data &amp; privacy</a>"));
+    }
+  });
+
+  test("the saved-spots heading says the list lives in this browser", () => {
+    const html = renderConditionsPage({
+      ...baseArgs,
+      scoredHours: day(TODAY, [8, 8]),
+      savedSpots: [{ name: "Zandvoort", lat: 52.37, lon: 4.53 }],
+    });
+    assert.ok(html.includes('<span class="saved-hint">Saved in this browser only.</span>'));
+  });
 });
