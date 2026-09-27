@@ -86,7 +86,8 @@ const EN = {
     "Nothing, until you press the star. Starring a spot saves it in a small cookie in your browser (<code>sd_spots</code>) so the chip row can show it again; once you have a saved spot the site also remembers the last spot you viewed (<code>sd_last</code>) so it opens there next time. Both stay in your browser for up to 90 days, are never sent anywhere except back to this site to render your page, and disappear when you unstar every spot or clear cookies. There are no analytics, no tracking, no accounts and no third-party scripts.",
   privAboutHeading: "About this site",
   privAboutBody:
-    "supdawg is a free, non-commercial hobby project run by {owner}, reachable at {contact}. The source code is on {repoLink}.",
+    "supdawg is a free, non-commercial hobby project. The source code is on {repoLink}; if something looks wrong or you have a question, open an {issueLink}.",
+  issueLinkText: "issue",
   privDisclaimerHeading: "No guarantee",
   privDisclaimerBody:
     "The verdicts on this site are computed from a public weather forecast using fixed thresholds. Forecasts are uncertain, conditions on open water can differ from the forecast at any moment, and this site cannot know your skill, your board or the water you are on. Use it as one input, not as a decision. You are responsible for your own safety; check official warnings from KNMI before going out.",
@@ -171,7 +172,8 @@ const NL: Dictionary = {
     "Niets, totdat je op de ster drukt. Een plek opslaan zet hem in een klein cookie in je browser (<code>sd_spots</code>), zodat de rij met plekken hem opnieuw kan tonen; zodra je een opgeslagen plek hebt, onthoudt de site ook de laatst bekeken plek (<code>sd_last</code>) zodat hij daar de volgende keer op opent. Beide blijven maximaal 90 dagen in je browser, worden nergens anders heen gestuurd dan terug naar deze site om je pagina te maken, en verdwijnen als je alle plekken weer uit je lijst haalt of je cookies wist. Er is geen analytics, geen tracking, geen account en geen script van derden.",
   privAboutHeading: "Over deze site",
   privAboutBody:
-    "supdawg is een gratis, niet-commercieel hobbyproject van {owner}, bereikbaar via {contact}. De broncode staat op {repoLink}.",
+    "supdawg is een gratis, niet-commercieel hobbyproject. De broncode staat op {repoLink}; als iets niet klopt of je hebt een vraag, open dan een {issueLink}.",
+  issueLinkText: "issue",
   privDisclaimerHeading: "Geen garantie",
   privDisclaimerBody:
     "De oordelen op deze site worden berekend uit een openbare weersverwachting met vaste drempels. Verwachtingen zijn onzeker, de omstandigheden op open water kunnen op elk moment afwijken, en deze site kent je ervaring, je board of het water waarop je vaart niet. Gebruik hem als één van je bronnen, niet als beslissing. Je bent zelf verantwoordelijk voor je veiligheid; check de officiële waarschuwingen van het KNMI voordat je het water op gaat.",
@@ -250,7 +252,8 @@ const DE: Dictionary = {
     "Nichts, bis du auf den Stern drückst. Einen Ort zu speichern legt ihn in einem kleinen Cookie in deinem Browser ab (<code>sd_spots</code>), damit die Ortsleiste ihn wieder anzeigen kann; sobald du einen gespeicherten Ort hast, merkt sich die Seite auch den zuletzt angesehenen Ort (<code>sd_last</code>), um beim nächsten Mal dort zu öffnen. Beide bleiben höchstens 90 Tage in deinem Browser, werden nirgendwohin gesendet außer zurück an diese Seite zum Aufbau deiner Seite, und verschwinden, wenn du alle Orte wieder entfernst oder deine Cookies löschst. Es gibt keine Analyse, kein Tracking, keine Konten und keine Skripte Dritter.",
   privAboutHeading: "Über diese Seite",
   privAboutBody:
-    "supdawg ist ein kostenloses, nicht-kommerzielles Hobbyprojekt von {owner}, erreichbar unter {contact}. Der Quellcode liegt auf {repoLink}.",
+    "supdawg ist ein kostenloses, nicht-kommerzielles Hobbyprojekt. Der Quellcode liegt auf {repoLink}; wenn etwas nicht stimmt oder du eine Frage hast, öffne ein {issueLink}.",
+  issueLinkText: "Issue",
   privDisclaimerHeading: "Keine Garantie",
   privDisclaimerBody:
     "Die Bewertungen auf dieser Seite werden aus einer öffentlichen Wettervorhersage mit festen Schwellenwerten berechnet. Vorhersagen sind unsicher, die Bedingungen auf offenem Wasser können jederzeit davon abweichen, und diese Seite kennt weder dein Können noch dein Board oder das Gewässer. Nutze sie als einen Anhaltspunkt, nicht als Entscheidung. Du bist selbst für deine Sicherheit verantwortlich; prüfe vor dem Rausfahren die amtlichen Warnungen (in den Niederlanden: KNMI).",

@@ -46,9 +46,7 @@ const sameSpot = (a: { lat: number; lon: number }, b: { lat: number; lon: number
 // PDOK names are "Street, City, Province"; the title and chips want the head of that.
 const shortName = (name: string): string => name.split(",")[0]!.trim();
 
-// Shown on the data & privacy page. Placeholders until the site owner fills them in.
-const SITE_OWNER = "[name or handle]";
-const SITE_CONTACT = "[contact email]";
+const ISSUES_URL = "https://github.com/mrsahala/sup-scorer/issues";
 
 const pad2 = (v: number) => String(v).padStart(2, "0");
 const fmtHour = (h: number) => `${pad2(h)}:00`;
@@ -609,8 +607,7 @@ export function renderAttributionPage({
   const licenseLink = `<a href="https://creativecommons.org/licenses/by/4.0/" rel="noopener">CC BY 4.0</a>`;
   const pdokLink = `<a href="https://www.pdok.nl/" rel="noopener">PDOK</a>`;
   const repoLink = `<a href="https://github.com/mrsahala/sup-scorer" rel="noopener">GitHub</a>`;
-  const owner = SITE_OWNER;
-  const contact = `<a href="mailto:${SITE_CONTACT}">${SITE_CONTACT}</a>`;
+  const issueLink = `<a href="${ISSUES_URL}" rel="noopener">${t(locale, "issueLinkText")}</a>`;
 
   return (
     DOCTYPE +
@@ -633,7 +630,7 @@ export function renderAttributionPage({
         />
         <AttributionSection
           heading={t(locale, "privAboutHeading")}
-          bodyHtml={t(locale, "privAboutBody", { owner, contact, repoLink })}
+          bodyHtml={t(locale, "privAboutBody", { repoLink, issueLink })}
         />
         <AttributionSection heading={t(locale, "privDisclaimerHeading")} bodyHtml={t(locale, "privDisclaimerBody")} />
         <p class="back">
