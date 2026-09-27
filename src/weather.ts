@@ -43,15 +43,16 @@ interface DaylightWindow {
   sunsetHm: string;
 }
 
-// fetchForecast's return value.
+// fetchForecast's return value. `timezone` is the IANA zone the hour rows
+// are expressed in - the location's own zone when the request used "auto".
 export interface ForecastResult {
   hours: HourRow[];
+  timezone: string;
 }
 
-// fetchForecast's params - all optional, each defaulting to config.ts's
-// LOCATION/LOOKAHEAD_DAYS. In practice the one real caller (index.ts)
-// always overrides lat/lon and never timezone/days (all of NL is one
-// timezone); the defaults mainly let tests call fetchForecast() bare.
+// fetchForecast's params - all optional. timezone defaults to "auto", which
+// makes Open-Meteo localize the hours to the point's own zone and report
+// it back; the other defaults mainly let tests call fetchForecast() bare.
 interface FetchForecastOptions {
   lat?: number;
   lon?: number;
@@ -63,6 +64,8 @@ interface FetchForecastOptions {
 // actually requests/uses - see https://open-meteo.com/en/docs for the
 // full public response shape).
 interface OpenMeteoResponse {
+  timezone?: string;
+  utc_offset_seconds?: number;
   hourly: {
     time: string[];
     temperature_2m: number[];
@@ -101,7 +104,7 @@ function round3(n: number): number {
 export async function fetchForecast({
   lat = LOCATION.lat,
   lon = LOCATION.lon,
-  timezone = LOCATION.timezone,
+  timezone = "auto",
   days = LOOKAHEAD_DAYS,
 }: FetchForecastOptions = {}): Promise<ForecastResult> {
   const url = new URL("https://api.open-meteo.com/v1/forecast");
@@ -156,5 +159,7 @@ export async function fetchForecast({
     };
   });
 
-  return { hours };
+  // With "auto" the zone comes back in the response; otherwise it's what was asked for.
+  const resolvedTimezone = data.timezone || (timezone !== "auto" ? timezone : LOCATION.timezone);
+  return { hours, timezone: resolvedTimezone };
 }

@@ -131,6 +131,28 @@ describe("saved spots", () => {
   });
 });
 
+describe("timezone", () => {
+  // 21:30 UTC on the 20th is 06:30 on the 21st in Tokyo but still 23:30 on the
+  // 20th in Amsterdam: Tokyo must call the 21st "Today" with the now marker on
+  // its 06:00 hour, Amsterdam must call it "Tomorrow".
+  const tokyoNow = new Date("2026-09-20T21:30:00Z");
+  const tokyoHours = day("2026-09-21", [8, 8, 8], 6);
+
+  test("today and the now marker follow the spot's zone, not the Worker's", () => {
+    const html = renderConditionsPage({ ...baseArgs, now: tokyoNow, timezone: "Asia/Tokyo", scoredHours: tokyoHours });
+    assert.ok(html.includes('data-date="2026-09-21"'));
+    assert.ok(html.includes("Today<small>"));
+    assert.ok(html.includes('class="now"'));
+    assert.ok(html.includes('data-sel="0"'));
+  });
+
+  test("the same instant in Amsterdam is still the 20th, with no now marker on the 21st", () => {
+    const html = renderConditionsPage({ ...baseArgs, now: tokyoNow, scoredHours: tokyoHours });
+    assert.ok(html.includes("Tomorrow<small>"));
+    assert.ok(!html.includes('class="now"'));
+  });
+});
+
 describe("#page-data", () => {
   const scoredHours = day(TODAY, [23, 13, 13]);
 
