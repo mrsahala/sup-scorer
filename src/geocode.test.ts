@@ -3,6 +3,9 @@ import assert from "node:assert/strict";
 import { searchLocation, reverseGeocode } from "./geocode";
 import { mockFetch, type MockRoute } from "../testSupport";
 
+// Photon is komoot's geocoder over OpenStreetMap data, used because it covers
+// the whole world; Open-Meteo's geocoder stands in when Photon fails. Matched by
+// URL prefix so a test can route each one on its own.
 const isPhoton = (url: string) => url.startsWith("https://photon.komoot.io/api/");
 const isPhotonReverse = (url: string) => url.startsWith("https://photon.komoot.io/reverse");
 const isOpenMeteo = (url: string) => url.startsWith("https://geocoding-api.open-meteo.com/");

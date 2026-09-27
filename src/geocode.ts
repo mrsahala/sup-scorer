@@ -4,11 +4,14 @@
 import { t, type Locale } from "./i18n";
 import { displayName, reverseName, type PlaceParts } from "./placename";
 
+// Photon splits search and reverse across two endpoints; Open-Meteo only searches.
 const PHOTON_SEARCH = "https://photon.komoot.io/api/";
 const PHOTON_REVERSE = "https://photon.komoot.io/reverse";
 const OPEN_METEO_SEARCH = "https://geocoding-api.open-meteo.com/v1/search";
 // Both providers ask callers to identify themselves.
 const USER_AGENT = "supdawg.nl (contact via /en/attribution)";
+// Suggestions arrive while the visitor types, so a stalled provider has to give
+// up with time left to try the other one.
 const TIMEOUT_MS = 2000;
 
 // One searchLocation match. `name` is the full display string; `kind` is a
