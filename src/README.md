@@ -7,7 +7,8 @@ rendering.
 - `weather.ts` - Open-Meteo hourly forecast fetch, mapped into the shape `scoring.ts` expects.
 - `scoring.ts` - the 5-tier wind/gust/temp scoring model (`scoreHour`).
 - `windows.ts` - finds contiguous qualifying-hour windows and day/lookahead summaries (`findWindows`, `daySummary`, `glance`), plus `groupByDate` (moved here from `render.tsx`).
-- `geocode.ts` - PDOK forward (free-text) and reverse (lat/lon -> place name) NL geocoding, used by the switcher's search and the GPS button (via `/api/search` and `/api/reverse`) and by the map preview's picked point.
+- `geocode.ts` - worldwide forward (free-text) and reverse (lat/lon -> place name) geocoding via Photon (OpenStreetMap data), with Open-Meteo's geocoder as the search fallback; used by the switcher's search and the GPS button (via `/api/search` and `/api/reverse`) and by the map preview's picked point.
+- `placename.ts` - formats a geocoder's structured fields into the one display string the site shows (place, one region, country only when it isn't the visitor's).
 - `tiles.ts` - tile math for the small map preview: which four map tiles to show and how to center them on a point (`thumbTiles`).
 - `cookies.ts` - reads/writes the two cookies that carry spot state across visits: `sd_spots` (saved spots, written by `app.js` when a spot is starred) and `sd_last` (last-viewed spot, set by the server only for visitors who already have a saved spot; 90 days).
 - `i18n.ts` - locale functions (`t()`, always-prefix locale-URL parsing/building, day/weekday labels) - the stable, rarely-changing half of i18n. Add a locale here (one `Locale` union member).
