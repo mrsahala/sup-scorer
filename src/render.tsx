@@ -46,6 +46,8 @@ const sameSpot = (a: { lat: number; lon: number }, b: { lat: number; lon: number
 // Geocoder names are "Place, Region[, Country]"; the title and chips want the head of that.
 const shortName = (name: string): string => name.split(",")[0]!.trim();
 
+const ISSUES_URL = "https://github.com/mrsahala/sup-scorer/issues";
+
 const pad2 = (v: number) => String(v).padStart(2, "0");
 const fmtHour = (h: number) => `${pad2(h)}:00`;
 const fmtRange = (w: GoodWindow) => `${fmtHour(w.startHour)}–${fmtHour(w.endHour)}`;
@@ -331,6 +333,7 @@ function TitleBlock({
             </div>
             <div class="list-h" id="saved-h" hidden={savedSpots.length === 0}>
               {t(locale, "savedSpots")}
+              <span class="saved-hint">{t(locale, "savedInBrowser")}</span>
             </div>
             <div class="list" id="saved">
               {savedSpots.map((s) => (
@@ -478,8 +481,9 @@ function Layout({
           </div>
         </header>
         <main>{children}</main>
-        {/* Links to the attribution page, required by Open-Meteo's and OpenStreetMap's license terms. */}
+        {/* Links to the data & privacy page, required by Open-Meteo's, OpenStreetMap's and PDOK's license terms. */}
         <footer class="site-footer">
+          <p class="disclaimer">{t(locale, "footerDisclaimer")}</p>
           <a href={localizedUrl(locale, "/attribution", "")}>{t(locale, "dataAttribution")}</a>
         </footer>
         {pageData === undefined ? null : (
@@ -603,7 +607,9 @@ export function renderAttributionPage({
   const licenseLink = `<a href="https://creativecommons.org/licenses/by/4.0/" rel="noopener">CC BY 4.0</a>`;
   const photonLink = `<a href="https://photon.komoot.io/" rel="noopener">Photon</a>`;
   const osmLink = `<a href="https://www.openstreetmap.org/copyright" rel="noopener">OpenStreetMap</a>`;
-  const repoLink = `<a href="https://github.com/mrsahala/sup-scorer" rel="noopener">GitHub repository</a>`;
+  const pdokLink = `<a href="https://www.pdok.nl/" rel="noopener">PDOK</a>`;
+  const repoLink = `<a href="https://github.com/mrsahala/sup-scorer" rel="noopener">GitHub</a>`;
+  const issueLink = `<a href="${ISSUES_URL}" rel="noopener">${t(locale, "issueLinkText")}</a>`;
 
   return (
     DOCTYPE +
@@ -616,12 +622,19 @@ export function renderAttributionPage({
         />
         <AttributionSection
           heading={t(locale, "attrLocationHeading")}
-          bodyHtml={t(locale, "attrLocationBody", { photonLink, osmLink, openMeteoLink })}
+          bodyHtml={`${t(locale, "attrLocationBody", { photonLink, osmLink, openMeteoLink })} ${t(locale, "attrTilesBody", { pdokLink })}`}
         />
+        <AttributionSection heading={t(locale, "privLocationHeading")} bodyHtml={t(locale, "privLocationBody")} />
+        <AttributionSection heading={t(locale, "privStorageHeading")} bodyHtml={t(locale, "privStorageBody")} />
         <AttributionSection
           heading={t(locale, "attrScoringHeading")}
           bodyHtml={t(locale, "attrScoringBody", { repoLink })}
         />
+        <AttributionSection
+          heading={t(locale, "privAboutHeading")}
+          bodyHtml={t(locale, "privAboutBody", { repoLink, issueLink })}
+        />
+        <AttributionSection heading={t(locale, "privDisclaimerHeading")} bodyHtml={t(locale, "privDisclaimerBody")} />
         <p class="back">
           <a href={localizedUrl(locale, "/", "")}>{t(locale, "backHome")}</a>
         </p>
