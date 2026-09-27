@@ -61,6 +61,44 @@ function reason(h, s) {
   return "";
 }
 
+const RAIN_TRACE_MM = 0.05; // below this the strip reads "0 mm", as in ribbon.tsx
+const MIN_SHOWN_RAIN_PCT = 10;
+const UNIT_PLACEHOLDER = /(\{\w+\}(?:%| mm)?)/; // ribbon.tsx's monoRuns split, exactly
+
+// A template as text and .mono runs, e.g. "{mm} mm rain" -> [mono "3 mm", " rain"].
+function monoRuns(template, vars) {
+  return template
+    .split(UNIT_PLACEHOLDER)
+    .filter((part) => part !== "")
+    .map((part) => {
+      const m = /^\{(\w+)\}(.*)$/.exec(part);
+      return m && m[1] in vars ? { mono: true, text: `${vars[m[1]]}${m[2]}` } : { mono: false, text: part };
+    });
+}
+
+// Rewrites el's text in place when its nodes already have the runs' shape,
+// else swaps in freshly built nodes (the rain span gains or loses its chance).
+function fillRuns(el, runs) {
+  const nodes = [...el.childNodes];
+  const isMono = (node) => node.nodeType === Node.ELEMENT_NODE && node.classList.contains("mono");
+  const sameShape =
+    nodes.length === runs.length &&
+    runs.every((r, i) => (r.mono ? isMono(nodes[i]) : nodes[i].nodeType === Node.TEXT_NODE));
+  if (sameShape) {
+    runs.forEach((r, i) => (nodes[i].textContent = r.text));
+    return;
+  }
+  el.replaceChildren(
+    ...runs.map((r) => {
+      if (!r.mono) return document.createTextNode(r.text);
+      const span = document.createElement("span");
+      span.className = "mono";
+      span.textContent = r.text;
+      return span;
+    })
+  );
+}
+
 // Rewrites the text of the strip DetailStrip rendered rather than rebuilding it:
 // the localized unit, the "°C" and the markup then stay exactly as the server
 // emitted them, and the strip can't reformat itself on the first scrub.
@@ -79,6 +117,16 @@ function fillDetail(detail, h, strings) {
     if (its[2].firstChild) its[2].firstChild.nodeValue = `${fmt(strings.detailFrom, { compass })} `;
     const arrow = its[2].querySelector(".ar");
     if (arrow) arrow.style.setProperty("--rot", `${(dir + 180) % 360}deg`);
+  }
+  if (its[3]) fillRuns(its[3], monoRuns(strings.detailCloud, { pct: String(Math.round(finite(h.cloudPct))) }));
+  if (its[4]) {
+    const mm = finite(h.rainMm) < RAIN_TRACE_MM ? 0 : r1(finite(h.rainMm));
+    const rainPct = Math.round(finite(h.rainPct));
+    const runs =
+      rainPct < MIN_SHOWN_RAIN_PCT
+        ? monoRuns(strings.detailRain, { mm: String(mm) })
+        : monoRuns(strings.detailRainChance, { mm: String(mm), pct: String(rainPct) });
+    fillRuns(its[4], runs);
   }
   setText(detail.querySelector(".why"), reason(h, strings));
 }

@@ -22,6 +22,9 @@ export interface HourRow {
   // https://open-meteo.com/en/docs#weathervariables lists the full table.
   // Not currently shown anywhere in the UI; fetched for future use.
   weatherCode: number;
+  cloudPct: number; // 0-100
+  rainMm: number; // precipitation over the hour
+  rainPct: number; // precipitation probability, 0-100
   // Precomputed once here (against the day's sunrise/sunset below) so
   // every downstream consumer - scoring.ts's qualifies check, render.tsx's
   // groupByDate filter - just reads a boolean instead of each re-deriving
@@ -73,6 +76,9 @@ interface OpenMeteoResponse {
     windgusts_10m: number[];
     winddirection_10m: number[];
     weathercode: number[];
+    cloudcover?: (number | null)[];
+    precipitation?: (number | null)[];
+    precipitation_probability?: (number | null)[];
   };
   daily: {
     time: string[];
@@ -94,6 +100,17 @@ export class OpenMeteoError extends Error {
   }
 }
 
+const HOURLY_FIELDS = [
+  "temperature_2m",
+  "windspeed_10m",
+  "windgusts_10m",
+  "winddirection_10m",
+  "weathercode",
+  "cloudcover",
+  "precipitation",
+  "precipitation_probability",
+];
+
 // Rounds to 3 decimal places (~110m) so nearby requests share Open-Meteo's
 // edge cache instead of missing on float noise.
 function round3(n: number): number {
@@ -110,7 +127,7 @@ export async function fetchForecast({
   const url = new URL("https://api.open-meteo.com/v1/forecast");
   url.searchParams.set("latitude", String(round3(lat)));
   url.searchParams.set("longitude", String(round3(lon)));
-  url.searchParams.set("hourly", "temperature_2m,windspeed_10m,windgusts_10m,winddirection_10m,weathercode");
+  url.searchParams.set("hourly", HOURLY_FIELDS.join(","));
   url.searchParams.set("daily", "sunrise,sunset");
   url.searchParams.set("timezone", timezone);
   url.searchParams.set("forecast_days", String(days));
@@ -153,6 +170,9 @@ export async function fetchForecast({
       gustKmh: h.windgusts_10m[i]!,
       windDirDeg: h.winddirection_10m[i]!,
       weatherCode: h.weathercode[i]!,
+      cloudPct: h.cloudcover?.[i] ?? 0,
+      rainMm: h.precipitation?.[i] ?? 0,
+      rainPct: h.precipitation_probability?.[i] ?? 0,
       isDaylight,
       sunrise: window?.sunriseHm ?? "",
       sunset: window?.sunsetHm ?? "",

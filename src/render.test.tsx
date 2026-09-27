@@ -21,7 +21,7 @@ const baseArgs = {
   now: NOW,
 };
 
-function row(date: string, hourNum: number, windKmh: number): HourRow {
+function row(date: string, hourNum: number, windKmh: number, extra: Partial<HourRow> = {}): HourRow {
   return {
     time: `${date}T${String(hourNum).padStart(2, "0")}:00`,
     date,
@@ -32,9 +32,13 @@ function row(date: string, hourNum: number, windKmh: number): HourRow {
     gustKmh: windKmh,
     windDirDeg: 225,
     weatherCode: 0,
+    cloudPct: 0,
+    rainMm: 0,
+    rainPct: 0,
     isDaylight: true,
     sunrise: "07:23",
     sunset: "19:40",
+    ...extra,
   };
 }
 
@@ -153,6 +157,42 @@ describe("timezone", () => {
   });
 });
 
+describe("meta line sky", () => {
+  const withSky = (hours: Partial<HourRow>[]) =>
+    renderConditionsPage({
+      ...baseArgs,
+      scoredHours: hours.map((extra, i) => scoreHour(row(TODAY, 10 + i, 13, extra))),
+    });
+  const meta = (html: string) => /<div class="meta">(.*?)<\/div>/.exec(html)?.[1] ?? "";
+
+  test("a dry day shows the sky word alone", () => {
+    const html = withSky([{ cloudPct: 10 }, { cloudPct: 20, rainMm: 0.04 }]);
+    assert.match(meta(html), /sunset <span class="mono">19:40<\/span> · sunny$/);
+    assert.ok(!html.includes("{sky}"));
+    assert.ok(!meta(html).includes("mm"));
+  });
+
+  test("a showery day adds the rain total", () => {
+    const html = withSky([{ cloudPct: 60, rainMm: 1.2 }, { cloudPct: 80, rainMm: 0.9 }]);
+    assert.match(meta(html), / · showers · 2.1 mm$/);
+  });
+
+  test("a rainy day says rainy, never 'rain' twice", () => {
+    const html = withSky([{ cloudPct: 95, rainMm: 4 }, { cloudPct: 95, rainMm: 3.9 }]);
+    assert.match(meta(html), / · rainy · 7.9 mm$/);
+    assert.ok(html.includes('aria-label="wind 13–13 km/h · 18–18°C · sunrise 07:23 · sunset 19:40 · rainy · 7.9 mm"'));
+  });
+
+  test("the sky word is localized", () => {
+    const html = renderConditionsPage({
+      ...baseArgs,
+      locale: "nl",
+      scoredHours: [scoreHour(row(TODAY, 10, 13, { cloudPct: 90 }))],
+    });
+    assert.match(meta(html), / · bewolkt$/);
+  });
+});
+
 describe("#page-data", () => {
   const scoredHours = day(TODAY, [23, 13, 13]);
 
@@ -166,6 +206,15 @@ describe("#page-data", () => {
     assert.equal(data.days[0].hours.length, 3);
     assert.equal(data.strings.tiers.great, "Great");
     assert.equal(data.strings.compass[0], "N");
+    assert.equal(data.strings.detailCloud, "{pct}% cloud");
+    assert.equal(data.strings.detailRain, "{mm} mm rain");
+    assert.equal(data.strings.detailRainChance, "{mm} mm rain · {pct}%");
+  });
+
+  test("each hour carries its cloud and rain", () => {
+    const wet = [scoreHour(row(TODAY, 10, 13, { cloudPct: 96, rainMm: 3, rainPct: 90 }))];
+    const hour = JSON.parse(pageData(renderConditionsPage({ ...baseArgs, scoredHours: wet }))).days[0].hours[0];
+    assert.deepEqual([hour.cloudPct, hour.rainMm, hour.rainPct], [96, 3, 90]);
   });
 
   test("the rendered selection matches the blob's", () => {

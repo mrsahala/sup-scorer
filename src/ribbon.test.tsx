@@ -22,6 +22,9 @@ function row(date: string, hourNum: number, windKmh: number, extra: Partial<Hour
     gustKmh: windKmh,
     windDirDeg: 225,
     weatherCode: 0,
+    cloudPct: 0,
+    rainMm: 0,
+    rainPct: 0,
     isDaylight: true,
     sunrise: "07:23",
     sunset: "19:40",
@@ -193,6 +196,41 @@ describe("DetailStrip", () => {
     assert.ok(cold.includes("too cold · 6°C"));
     const great = render(<DetailStrip locale="en" hour={scoreHour(row(TODAY, 9, 8))} />);
     assert.ok(great.includes('<span class="why"></span>'));
+  });
+});
+
+describe("DetailStrip sky", () => {
+  const strip = (extra: Partial<HourRow>, locale: "en" | "nl" = "en") =>
+    render(<DetailStrip locale={locale} hour={scoreHour(row(TODAY, 9, 8, extra))} />);
+
+  test("cloud and rain follow the from span, before the reason", () => {
+    const html = strip({ cloudPct: 96, rainMm: 3, rainPct: 90 });
+    assert.ok(
+      html.includes(
+        '</svg></span><span class="it"><span class="mono">96%</span> cloud</span>' +
+          '<span class="it"><span class="mono">3 mm</span> rain · <span class="mono">90%</span></span><span class="why">'
+      )
+    );
+  });
+
+  test("rain rounds to one decimal", () => {
+    assert.ok(strip({ rainMm: 0.46, rainPct: 55 }).includes('<span class="mono">0.5 mm</span> rain · <span class="mono">55%</span>'));
+  });
+
+  test("a trace under 0.05 mm reads 0 mm, and keeps its chance from 10%", () => {
+    assert.ok(strip({ rainMm: 0.04, rainPct: 40 }).includes('<span class="mono">0 mm</span> rain · <span class="mono">40%</span>'));
+    assert.ok(strip({ rainMm: 0, rainPct: 10 }).includes('<span class="mono">0 mm</span> rain · <span class="mono">10%</span>'));
+  });
+
+  test("the chance is dropped under 10%", () => {
+    assert.ok(strip({ rainMm: 0, rainPct: 9 }).includes('<span class="it"><span class="mono">0 mm</span> rain</span>'));
+    assert.ok(strip({ rainMm: 0.3, rainPct: 5 }).includes('<span class="it"><span class="mono">0.3 mm</span> rain</span>'));
+  });
+
+  test("the spans are localized", () => {
+    const html = strip({ cloudPct: 50, rainMm: 1, rainPct: 70 }, "nl");
+    assert.ok(html.includes('<span class="mono">50%</span> bewolking'));
+    assert.ok(html.includes('<span class="mono">1 mm</span> regen · <span class="mono">70%</span>'));
   });
 });
 
