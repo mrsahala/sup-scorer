@@ -16,9 +16,9 @@ describe("sd_last round-trip", () => {
     assert.doesNotMatch(serializeSdLast(value, { secure: false }), /; Secure/);
   });
 
-  test("always sets 1 year Max-Age, Path=/, SameSite=Lax", () => {
+  test("always sets 90-day Max-Age, Path=/, SameSite=Lax", () => {
     const setCookie = serializeSdLast({ name: "X", lat: 1, lon: 1, gps: false }, { secure: true });
-    assert.match(setCookie, /Max-Age=31536000/);
+    assert.match(setCookie, /Max-Age=7776000/);
     assert.match(setCookie, /Path=\//);
     assert.match(setCookie, /SameSite=Lax/);
   });
