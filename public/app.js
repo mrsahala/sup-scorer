@@ -145,6 +145,7 @@ function wireRibbon(rb, detail, hours, strings, unit) {
   const cursor = rb.querySelector(".cursor");
   const colHi = rb.querySelector(".col-hi");
   const dot = cursor && cursor.querySelector("i");
+  const cells = rb.querySelectorAll(".cond .cell");
   if (!chart || !cursor || !colHi || !dot) return;
 
   let sel = clamp(parseInt(rb.dataset.sel, 10) || 0, 0, n - 1);
@@ -157,6 +158,7 @@ function wireRibbon(rb, detail, hours, strings, unit) {
     cursor.style.setProperty("--x", pct((i + 0.5) / n));
     dot.style.setProperty("--y", yPct(h.windKmh));
     colHi.style.setProperty("--x", pct(i / n));
+    cells.forEach((cell, j) => cell.classList.toggle("on", j === i));
     fillDetail(detail, h, strings, unit);
     shown = i;
   };

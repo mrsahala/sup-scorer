@@ -186,6 +186,21 @@ final. Attributes marked `data-*` are what `app.js` reads.
 <script type="module" src="/app.js"></script>
 ```
 
+Conditions row, the first child of `.ribbon`:
+
+```html
+<div class="ribbon" …>
+  <div class="cond" aria-hidden="true">
+    <span class="cell sky-sun on" style="--heat:rgb(240,192,75)"><svg class="g" viewBox="-8 -8 16 16">…</svg><b>21°</b></span>
+    <span class="cell sky-rain" style="--heat:rgb(90,167,217)"><svg class="g" …/><b>13°</b><i class="rain" style="--mm:0.45"></i></span>
+    <span class="cell sky-partly" style="--heat:rgb(159,199,106)"><svg class="g" …/><b>16°</b><i class="rain maybe"></i></span>
+    …one cell per hour…
+  </div>
+  <div class="strip">…</div>
+  …
+</div>
+```
+
 Geometry rules for the ribbon (port from `renderRibbon` in the prototype,
 adapted to percentages):
 

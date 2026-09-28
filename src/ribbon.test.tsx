@@ -199,6 +199,81 @@ describe("DetailStrip", () => {
   });
 });
 
+describe("Ribbon conditions row", () => {
+  // sun, partly, cloud, rain, likely rain at exactly 40%, a trace too small for a bar.
+  const SKY: Partial<HourRow>[] = [
+    { cloudPct: 10, tempC: 22 },
+    { cloudPct: 50, tempC: 17 },
+    { cloudPct: 96, rainPct: 30, tempC: 12 },
+    { cloudPct: 90, rainMm: 1.8, rainPct: 90, tempC: 5 },
+    { cloudPct: 40, rainMm: 0, rainPct: 40, tempC: 27.4 },
+    { cloudPct: 20, rainMm: 0.05, rainPct: 39, tempC: 35 },
+  ];
+  const hours = SKY.map((extra, i) => scoreHour(row(TODAY, 10 + i, 8, extra)));
+  const html = render(<Ribbon locale="en" day={TODAY} hours={hours} sel={2} />);
+  const cond = /<div class="cond" aria-hidden="true">(.*?)<\/div>/.exec(html)?.[1] ?? "";
+  const cells = cond.split('<span class="cell').slice(1);
+
+  test("is the ribbon's first child, before the strip", () => {
+    assert.match(html, /^<div class="ribbon"[^>]*><div class="cond" aria-hidden="true">/);
+    assert.ok(html.indexOf('class="cond"') < html.indexOf('class="strip"'));
+  });
+
+  test("one cell per hour, with its sky class, heat color and number", () => {
+    assert.equal(cells.length, hours.length);
+    const heads = cells.map((c) => /^ ([^"]*)" style="--heat:([^"]+)">.*?<b>([^<]+)<\/b>/.exec(c)?.slice(1));
+    assert.deepEqual(heads, [
+      ["sky-sun", "rgb(240,192,75)", "22°"],
+      ["sky-partly", "rgb(159,199,106)", "17°"],
+      ["sky-cloud on", "rgb(90,167,217)", "12°"],
+      ["sky-rain", "rgb(74,127,214)", "5°"],
+      ["sky-partly", "rgb(239,134,60)", "27°"],
+      ["sky-sun", "rgb(224,85,58)", "35°"],
+    ]);
+  });
+
+  test("each cell carries its glyph", () => {
+    assert.ok(cells[0]!.includes('<svg class="g" viewBox="-8 -8 16 16">'));
+    assert.equal(countMatches(cells[0]!, /class="g-ray"/g), 8);
+    assert.ok(cells[1]!.includes('class="g-sun"') && cells[1]!.includes('class="g-cloud"'));
+    assert.ok(cells[2]!.includes('class="g-cloud dark"') && !cells[2]!.includes("g-drop"));
+    assert.equal(countMatches(cells[3]!, /class="g-drop"/g), 3);
+  });
+
+  test("the on cell is the selected hour, and only that one", () => {
+    assert.ok(html.includes('data-sel="2"'));
+    assert.equal(countMatches(cond, / on"/g), 1);
+    const other = render(<Ribbon locale="en" day={TODAY} hours={hours} sel={5} />);
+    assert.ok(other.includes('data-sel="5"') && other.includes('class="cell sky-sun on"'));
+  });
+
+  test("a rain bar only above 0.05 mm, sized by the amount", () => {
+    assert.equal(countMatches(cond, /class="rain"/g), 1);
+    assert.ok(cells[3]!.includes('<i class="rain" style="--mm:0.45"></i>'));
+    assert.ok(!cells[5]!.includes("rain"));
+    const heavy = render(<Ribbon locale="en" day={TODAY} hours={[scoreHour(row(TODAY, 9, 8, { rainMm: 12 }))]} sel={0} />);
+    assert.ok(heavy.includes('<i class="rain" style="--mm:1"></i>'));
+  });
+
+  test("a likely-rain line only from 40% with no rain", () => {
+    assert.equal(countMatches(cond, /class="rain maybe"/g), 1);
+    assert.ok(cells[4]!.includes('<i class="rain maybe"></i>'));
+    assert.ok(!cells[2]!.includes("maybe"));
+  });
+
+  test("numbers follow the unit", () => {
+    const f = render(<Ribbon locale="en" day={TODAY} hours={hours} sel={0} unit="F" />);
+    const nums = [...f.matchAll(/<b>(-?\d+°)<\/b>/g)].map((m) => m[1]);
+    assert.deepEqual(nums, ["72°", "63°", "54°", "41°", "81°", "95°"]);
+  });
+
+  test("missing values render finite", () => {
+    const broken = hours.map((h) => ({ ...h, tempC: NaN, cloudPct: NaN, rainMm: NaN, rainPct: NaN }));
+    const out = render(<DayCard locale="en" date={TODAY} hours={broken} today={TODAY} />);
+    assert.doesNotMatch(out, /NaN|Infinity|undefined/);
+  });
+});
+
 describe("Fahrenheit", () => {
   test("the detail strip's temperature and cold reason follow the unit", () => {
     const html = render(<DetailStrip locale="en" hour={scoreHour(row(TODAY, 9, 8, { tempC: 6 }))} unit="F" />);
