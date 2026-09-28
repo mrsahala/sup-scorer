@@ -158,6 +158,55 @@ describe("/{locale}/conditions - sd_last cookie round-trip", () => {
   });
 });
 
+describe("temperature unit", () => {
+  const unitOf = async (res: Response) => /"unit":"([CF])"/.exec(await res.text())?.[1];
+  const page = (query = "", opts: { cookie?: string; cf?: Record<string, unknown> } = {}) =>
+    worker.fetch(req(`https://supdawg.nl/en/conditions?lat=52.2&lon=5.08&name=X${query}`, opts), env, ctx);
+
+  test("?unit= wins over the cookie and the country", async (t) => {
+    mockFetch(t, [openMeteoRoute()]);
+    assert.equal(await unitOf(await page("&unit=C", { cookie: "sd_unit=F", cf: { country: "US" } })), "C");
+  });
+
+  test("the cookie wins over the country", async (t) => {
+    mockFetch(t, [openMeteoRoute()]);
+    assert.equal(await unitOf(await page("", { cookie: "sd_unit=C", cf: { country: "US" } })), "C");
+  });
+
+  test("US, Liberia and Myanmar default to Fahrenheit", async (t) => {
+    mockFetch(t, [openMeteoRoute()]);
+    for (const country of ["US", "LR", "MM"]) assert.equal(await unitOf(await page("", { cf: { country } })), "F");
+  });
+
+  test("everyone else, and an unknown country, defaults to Celsius", async (t) => {
+    mockFetch(t, [openMeteoRoute()]);
+    assert.equal(await unitOf(await page("", { cf: { country: "NL" } })), "C");
+    assert.equal(await unitOf(await page()), "C");
+  });
+
+  test("an invalid ?unit= is ignored and sets nothing", async (t) => {
+    mockFetch(t, [openMeteoRoute()]);
+    const res = await page("&unit=K", { cf: { country: "US" } });
+    assert.equal(res.headers.get("Set-Cookie"), null);
+    assert.equal(await unitOf(res), "F");
+  });
+
+  test("?unit= sets the sd_unit cookie on that response, on either page route", async (t) => {
+    mockFetch(t, [openMeteoRoute()]);
+    const res = await page("&unit=F");
+    assert.equal(res.headers.get("Set-Cookie"), "sd_unit=F; Max-Age=31536000; Path=/; SameSite=Lax; Secure");
+    const home = await worker.fetch(req("https://supdawg.nl/en/?unit=C"), env, ctx);
+    assert.match(home.headers.get("Set-Cookie") ?? "", /^sd_unit=C;/);
+    assert.equal(await unitOf(home), "C");
+  });
+
+  test("without ?unit= no unit cookie is set", async (t) => {
+    mockFetch(t, [openMeteoRoute()]);
+    const res = await page("", { cookie: "sd_unit=F" });
+    assert.equal(res.headers.get("Set-Cookie"), null);
+  });
+});
+
 describe("/api/glance", () => {
   test("a fixture with a qualifying window (not all day) returns its tier and range", async (t) => {
     // Daylight 06:00-12:00 (7 hours modeled); only 08-10 qualifies (great),

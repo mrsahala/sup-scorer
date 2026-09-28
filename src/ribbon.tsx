@@ -10,7 +10,7 @@ import { t, compassLabel, dateLocale, dayLabel, type Locale } from "./i18n";
 import type { ScoredHour } from "./scoring";
 import { daySummary, findWindows, type DaySummary } from "./windows";
 import type { Tier } from "./config";
-import { rainTotal, skyWord, type SkyWord } from "./sky";
+import { formatTemp, rainTotal, skyWord, type SkyWord, type Unit } from "./sky";
 
 const Y_MAX = 40; // km/h; the same vertical scale on every day, so shapes compare
 const VB_W = 1000;
@@ -145,18 +145,22 @@ export function monoRuns(template: string, values: Record<string, string>): Comp
     });
 }
 
+export const unitSymbol = (unit: Unit) => (unit === "F" ? "°F" : "°C");
+
 // The ranges shown in the meta line, also used as the ribbon's alt text.
 function metaValues(
   locale: Locale,
-  hours: ScoredHour[]
-): { wind: string; temp: string; sunrise: string; sunset: string; sky: string } {
-  const range = (vals: number[]) =>
-    vals.length ? `${Math.round(Math.min(...vals))}–${Math.round(Math.max(...vals))}` : "–";
+  hours: ScoredHour[],
+  unit: Unit
+): { wind: string; temp: string; unit: string; sunrise: string; sunset: string; sky: string } {
+  const range = (vals: number[], fmt: (v: number) => string) =>
+    vals.length ? `${fmt(Math.min(...vals))}–${fmt(Math.max(...vals))}` : "–";
   const rain = rainTotal(hours);
   const word = t(locale, SKY_WORD_KEY[skyWord(hours)]);
   return {
-    wind: range(hours.map((h) => h.windKmh).filter(Number.isFinite)),
-    temp: range(hours.map((h) => h.tempC).filter(Number.isFinite)),
+    wind: range(hours.map((h) => h.windKmh).filter(Number.isFinite), (v) => String(Math.round(v))),
+    temp: range(hours.map((h) => h.tempC).filter(Number.isFinite), (v) => formatTemp(v, unit)),
+    unit: unitSymbol(unit),
     sunrise: hours[0]?.sunrise || "–",
     sunset: hours[0]?.sunset || "–",
     sky: rain >= MIN_SHOWN_RAIN_MM ? `${word} · ${rain} mm` : word,
@@ -180,9 +184,9 @@ function skyDetail(locale: Locale, h: ScoredHour): { cloud: ComponentChildren[];
 }
 
 // Why this hour isn't "great" - mirrors reason() in the prototype.
-function reasonText(locale: Locale, h: ScoredHour): string {
+function reasonText(locale: Locale, h: ScoredHour, unit: Unit): string {
   if (h.gustDowngraded) return t(locale, "reasonGust", { gust: String(Math.round(finite(h.gustKmh))) });
-  if (h.coldLimited) return t(locale, "reasonCold", { temp: String(Math.round(finite(h.tempC))) });
+  if (h.coldLimited) return t(locale, "reasonCold", { temp: formatTemp(h.tempC, unit), unit: unitSymbol(unit) });
   if (h.tier !== "great") return t(locale, "reasonSustained", { wind: String(Math.round(finite(h.windKmh))) });
   return "";
 }
@@ -221,6 +225,7 @@ export function Ribbon({
   sel,
   nowIndex = -1,
   nowFraction = 0,
+  unit = "C",
 }: {
   locale: Locale;
   day: string;
@@ -228,6 +233,7 @@ export function Ribbon({
   sel: number;
   nowIndex?: number;
   nowFraction?: number;
+  unit?: Unit;
 }): JSX.Element | null {
   const n = hours.length;
   if (!n) return null;
@@ -279,7 +285,7 @@ export function Ribbon({
       class="ribbon"
       tabindex={0}
       role="img"
-      aria-label={t(locale, "metaLine", metaValues(locale, hours))}
+      aria-label={t(locale, "metaLine", metaValues(locale, hours, unit))}
       data-n={n}
       data-sel={selIdx}
       data-now={showNow ? String(r2(nowAt)) : undefined}
@@ -368,7 +374,15 @@ export function Ribbon({
   );
 }
 
-export function DetailStrip({ locale, hour }: { locale: Locale; hour: ScoredHour }): JSX.Element {
+export function DetailStrip({
+  locale,
+  hour,
+  unit = "C",
+}: {
+  locale: Locale;
+  hour: ScoredHour;
+  unit?: Unit;
+}): JSX.Element {
   const sky = skyDetail(locale, hour);
   return (
     <div class={`detail tier-${hour.tier}`} aria-live="polite">
@@ -384,7 +398,7 @@ export function DetailStrip({ locale, hour }: { locale: Locale; hour: ScoredHour
         {t(locale, "unitKmh")}
       </span>
       <span class="it">
-        <span class="mono">{r1(finite(hour.tempC))}°C</span>
+        <span class="mono">{`${formatTemp(hour.tempC, unit)}${unitSymbol(unit)}`}</span>
       </span>
       <span class="it">
         {t(locale, "detailFrom", { compass: compassLabel(locale, finite(hour.windDirDeg)) })}{" "}
@@ -392,7 +406,7 @@ export function DetailStrip({ locale, hour }: { locale: Locale; hour: ScoredHour
       </span>
       <span class="it">{sky.cloud}</span>
       <span class="it">{sky.rain}</span>
-      <span class="why">{reasonText(locale, hour)}</span>
+      <span class="why">{reasonText(locale, hour, unit)}</span>
     </div>
   );
 }
@@ -439,6 +453,7 @@ export function DayCard({
   sel,
   nowIndex = -1,
   nowFraction = 0,
+  unit = "C",
 }: {
   locale: Locale;
   date: string;
@@ -447,12 +462,13 @@ export function DayCard({
   sel?: number;
   nowIndex?: number;
   nowFraction?: number;
+  unit?: Unit;
 }): JSX.Element | null {
   const n = hours.length;
   if (!n) return null;
 
   const selIdx = clamp(Math.trunc(finite(sel ?? defaultSel(hours, nowIndex, date === today))), 0, n - 1);
-  const meta = metaValues(locale, hours);
+  const meta = metaValues(locale, hours, unit);
   const heading = dayHeading(locale, date, today);
 
   return (
@@ -468,6 +484,7 @@ export function DayCard({
         {interpolate(t(locale, "metaLine"), {
           wind: <span class="mono">{meta.wind}</span>,
           temp: <span class="mono">{meta.temp}</span>,
+          unit: meta.unit,
           sunrise: <span class="mono">{meta.sunrise}</span>,
           sunset: <span class="mono">{meta.sunset}</span>,
           sky: meta.sky,
@@ -480,8 +497,9 @@ export function DayCard({
         sel={selIdx}
         nowIndex={nowIndex}
         nowFraction={nowFraction}
+        unit={unit}
       />
-      <DetailStrip locale={locale} hour={hours[selIdx]!} />
+      <DetailStrip locale={locale} hour={hours[selIdx]!} unit={unit} />
     </section>
   );
 }

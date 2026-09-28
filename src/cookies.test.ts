@@ -1,6 +1,27 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import { parseSdLast, parseSdSpots, serializeSdLast, isLocalhost } from "./cookies";
+import { parseSdLast, parseSdSpots, parseSdUnit, serializeSdLast, serializeSdUnit, isLocalhost } from "./cookies";
+
+describe("sd_unit", () => {
+  test("round-trips C and F", () => {
+    for (const unit of ["C", "F"] as const) {
+      assert.equal(parseSdUnit(serializeSdUnit(unit, { secure: true }).split(";")[0]!), unit);
+    }
+  });
+
+  test("lasts a year on every path, Lax, Secure unless local", () => {
+    const setCookie = serializeSdUnit("F", { secure: true });
+    assert.match(setCookie, /^sd_unit=F; Max-Age=31536000; Path=\/; SameSite=Lax; Secure$/);
+    assert.doesNotMatch(serializeSdUnit("F", { secure: false }), /Secure/);
+  });
+
+  test("anything but C or F is no preference", () => {
+    assert.equal(parseSdUnit(null), null);
+    assert.equal(parseSdUnit("sd_unit=K"), null);
+    assert.equal(parseSdUnit("sd_unit=f"), null);
+    assert.equal(parseSdUnit("other=1; sd_unit=F"), "F");
+  });
+});
 
 describe("sd_last round-trip", () => {
   test("serializes then parses back the same value", () => {

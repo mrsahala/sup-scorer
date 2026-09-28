@@ -179,7 +179,7 @@ describe("DetailStrip", () => {
     assert.ok(html.includes('class="detail tier-poor"'));
     assert.ok(html.includes("11:00"));
     assert.ok(html.includes("24.8 → 26.1"));
-    assert.ok(html.includes("17.5°C"));
+    assert.ok(html.includes('<span class="mono">18°C</span>'));
     assert.ok(html.includes("from W"));
     assert.ok(html.includes("sustained 25 km/h"));
   });
@@ -196,6 +196,27 @@ describe("DetailStrip", () => {
     assert.ok(cold.includes("too cold · 6°C"));
     const great = render(<DetailStrip locale="en" hour={scoreHour(row(TODAY, 9, 8))} />);
     assert.ok(great.includes('<span class="why"></span>'));
+  });
+});
+
+describe("Fahrenheit", () => {
+  test("the detail strip's temperature and cold reason follow the unit", () => {
+    const html = render(<DetailStrip locale="en" hour={scoreHour(row(TODAY, 9, 8, { tempC: 6 }))} unit="F" />);
+    assert.ok(html.includes('<span class="mono">43°F</span>'));
+    assert.ok(html.includes("too cold · 43°F"));
+    assert.ok(!html.includes("°C"));
+  });
+
+  test("the day card's meta line and alt text follow the unit", () => {
+    const html = render(<DayCard locale="en" date={TODAY} hours={mixedDay} today={TODAY} unit="F" />);
+    assert.ok(html.includes('<span class="mono">64–64</span>°F · sunrise'));
+    assert.ok(html.includes("· 64–64°F ·"));
+    assert.ok(!html.includes("°C"));
+  });
+
+  test("Celsius is the default", () => {
+    const html = render(<DayCard locale="en" date={TODAY} hours={mixedDay} today={TODAY} />);
+    assert.ok(html.includes('<span class="mono">18–18</span>°C · sunrise'));
   });
 });
 

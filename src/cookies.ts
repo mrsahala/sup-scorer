@@ -1,11 +1,15 @@
-// Reads and writes this site's two cookies. "sd" is short for supdawg.
+// Reads and writes this site's cookies. "sd" is short for supdawg.
 //
 // Parsing never throws on a hostile cookie - a malformed one is just
 // treated as "no cookie".
+import type { Unit } from "./sky";
+
 const SD_LAST = "sd_last";
 const SD_SPOTS = "sd_spots";
+const SD_UNIT = "sd_unit";
 const MAX_SPOTS = 8;
 const NINETY_DAYS_SECONDS = 60 * 60 * 24 * 90;
+const ONE_YEAR_SECONDS = 60 * 60 * 24 * 365;
 
 // sd_last: set by the server on a /conditions response, but only for a
 // visitor who has already starred a spot (see index.ts) - the star is the
@@ -93,6 +97,19 @@ export function parseSdSpots(cookieHeader: string | null): SdSpot[] {
 export function serializeSdLast(value: SdLast, { secure }: { secure: boolean }): string {
   const encoded = encodeURIComponent(JSON.stringify(value));
   const attrs = [`${SD_LAST}=${encoded}`, `Max-Age=${NINETY_DAYS_SECONDS}`, "Path=/", "SameSite=Lax"];
+  if (secure) attrs.push("Secure");
+  return attrs.join("; ");
+}
+
+// sd_unit: the temperature unit the visitor picked in the switcher.
+export function parseSdUnit(cookieHeader: string | null): Unit | null {
+  const raw = readCookie(cookieHeader, SD_UNIT);
+  return raw === "C" || raw === "F" ? raw : null;
+}
+
+// Set-Cookie value for sd_unit - the same lifetime and attributes app.js gives sd_spots.
+export function serializeSdUnit(unit: Unit, { secure }: { secure: boolean }): string {
+  const attrs = [`${SD_UNIT}=${unit}`, `Max-Age=${ONE_YEAR_SECONDS}`, "Path=/", "SameSite=Lax"];
   if (secure) attrs.push("Secure");
   return attrs.join("; ");
 }

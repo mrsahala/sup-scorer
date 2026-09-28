@@ -30,6 +30,10 @@ const r1 = (v) => Math.round(v * 10) / 10;
 const pct = (fraction) => `${Math.round(fraction * 10000) / 100}%`;
 const yPct = (kmh) => pct(1 - clamp(finite(kmh), 0, Y_MAX) / Y_MAX);
 
+// ribbon.tsx's formatTemp and unitSymbol, same rounding.
+const formatTemp = (c, unit) => String(Math.round(unit === "F" ? (finite(c) * 9) / 5 + 32 : finite(c)) || 0);
+const unitSymbol = (unit) => (unit === "F" ? "°F" : "°C");
+
 const fmt = (template, vars) => template.replace(/\{(\w+)\}/g, (m, k) => (k in vars ? vars[k] : m));
 const shortName = (name) => String(name).split(",")[0].trim();
 const sameSpot = (a, b) => Math.abs(a.lat - b.lat) < SPOT_EPSILON && Math.abs(a.lon - b.lon) < SPOT_EPSILON;
@@ -54,9 +58,9 @@ function readPageData() {
 // ---------- detail strip ----------
 
 // Why this hour isn't "great" - the same order and rounding as reasonText in ribbon.tsx.
-function reason(h, s) {
+function reason(h, s, unit) {
   if (h.gustDowngraded) return fmt(s.reasonGust, { gust: String(Math.round(finite(h.gustKmh))) });
-  if (h.coldLimited) return fmt(s.reasonCold, { temp: String(Math.round(finite(h.tempC))) });
+  if (h.coldLimited) return fmt(s.reasonCold, { temp: formatTemp(h.tempC, unit), unit: unitSymbol(unit) });
   if (h.tier !== "great") return fmt(s.reasonSustained, { wind: String(Math.round(finite(h.windKmh))) });
   return "";
 }
@@ -102,7 +106,7 @@ function fillRuns(el, runs) {
 // Rewrites the text of the strip DetailStrip rendered rather than rebuilding it:
 // the localized unit, the "°C" and the markup then stay exactly as the server
 // emitted them, and the strip can't reformat itself on the first scrub.
-function fillDetail(detail, h, strings) {
+function fillDetail(detail, h, strings, unit) {
   const its = detail.querySelectorAll(".it");
   const dir = finite(h.windDirDeg);
 
@@ -110,7 +114,7 @@ function fillDetail(detail, h, strings) {
   setText(detail.querySelector(".tm"), h.hour);
   setText(detail.querySelector(".vd"), (strings.tiers[h.tier] || h.tier) + (h.gustDowngraded ? "*" : ""));
   if (its[0]) setText(its[0].querySelector(".mono"), `${r1(finite(h.windKmh))} → ${r1(finite(h.gustKmh))}`);
-  if (its[1]) setText(its[1].querySelector(".mono"), `${r1(finite(h.tempC))}°C`);
+  if (its[1]) setText(its[1].querySelector(".mono"), `${formatTemp(h.tempC, unit)}${unitSymbol(unit)}`);
   if (its[2]) {
     const compass = strings.compass[Math.round(dir / 45) % 8] || "";
     // The leading text node is "from WNW " - the trailing space before the arrow.
@@ -128,14 +132,14 @@ function fillDetail(detail, h, strings) {
         : monoRuns(strings.detailRainChance, { mm: String(mm), pct: String(rainPct) });
     fillRuns(its[4], runs);
   }
-  setText(detail.querySelector(".why"), reason(h, strings));
+  setText(detail.querySelector(".why"), reason(h, strings, unit));
 }
 
 // ---------- ribbon scrub ----------
 
 // Hover previews an hour, press/drag selects continuously and the selection
 // stays where the pointer lifts. Same model for mouse and touch, no modes.
-function wireRibbon(rb, detail, hours, strings) {
+function wireRibbon(rb, detail, hours, strings, unit) {
   const n = hours.length;
   const chart = rb.querySelector(".chart");
   const cursor = rb.querySelector(".cursor");
@@ -153,7 +157,7 @@ function wireRibbon(rb, detail, hours, strings) {
     cursor.style.setProperty("--x", pct((i + 0.5) / n));
     dot.style.setProperty("--y", yPct(h.windKmh));
     colHi.style.setProperty("--x", pct(i / n));
-    fillDetail(detail, h, strings);
+    fillDetail(detail, h, strings, unit);
     shown = i;
   };
   const select = (i) => {
@@ -216,7 +220,7 @@ function wireRibbons(page) {
     const day = byDate.get(card.dataset.date);
     const rb = card.querySelector(".ribbon");
     const detail = card.querySelector(".detail");
-    if (day && day.hours.length && rb && detail) wireRibbon(rb, detail, day.hours, page.strings);
+    if (day && day.hours.length && rb && detail) wireRibbon(rb, detail, day.hours, page.strings, page.unit);
   }
 }
 

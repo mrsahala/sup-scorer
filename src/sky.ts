@@ -1,9 +1,10 @@
-// Sky and rain summaries for the ribbon: per-hour glyph kind, per-day word and
-// rain total, and the temperature scale shared by every day of a forecast.
+// Sky, rain and temperature helpers: per-hour glyph kind, per-day word and rain
+// total, the fixed temperature color scale, and °C/°F display.
 import type { ScoredHour } from "./scoring";
 
 export type SkyKind = "sun" | "partly" | "cloud" | "rain";
 export type SkyWord = "sunny" | "mixed" | "overcast" | "showers" | "rainy";
+export type Unit = "C" | "F";
 
 const RAIN_MM = 0.2;
 const LIKELY_RAIN_PCT = 60;
@@ -13,9 +14,16 @@ const RAINY_MM = 3;
 const SHOWERS_MM = 0.5;
 const SUNNY_MEAN_PCT = 30;
 const MIXED_MEAN_PCT = 70;
-const TEMP_PAD = 2;
-const TEMP_MIN_SPAN = 12;
-const TEMP_FALLBACK = { min: 0, max: 30 };
+
+// °C -> rgb, the same on every forecast so a color always means the same temperature.
+const HEAT_STOPS: [number, [number, number, number]][] = [
+  [5, [74, 127, 214]],
+  [12, [90, 167, 217]],
+  [17, [159, 199, 106]],
+  [22, [240, 192, 75]],
+  [27, [240, 138, 60]],
+  [32, [224, 85, 58]],
+];
 
 const finite = (v: number) => (Number.isFinite(v) ? v : 0);
 const daylight = (hours: ScoredHour[]) => hours.filter((h) => h.isDaylight);
@@ -46,16 +54,26 @@ export function skyWord(dayHours: ScoredHour[]): SkyWord {
   return "overcast";
 }
 
-// One temperature scale for the whole forecast, padded and at least TEMP_MIN_SPAN wide.
-export function tempRange(days: ScoredHour[][]): { min: number; max: number } {
-  const temps = days.flatMap(daylight).map((h) => h.tempC).filter(Number.isFinite);
-  if (!temps.length) return { ...TEMP_FALLBACK };
-  let min = Math.floor(Math.min(...temps)) - TEMP_PAD;
-  let max = Math.ceil(Math.max(...temps)) + TEMP_PAD;
-  const short = TEMP_MIN_SPAN - (max - min);
-  if (short > 0) {
-    min -= short / 2;
-    max += short / 2;
+export function heatColor(tempC: number): string {
+  const t = finite(tempC);
+  const [firstC, firstRgb] = HEAT_STOPS[0]!;
+  let rgb = HEAT_STOPS[HEAT_STOPS.length - 1]![1];
+  if (t <= firstC) rgb = firstRgb;
+  else {
+    for (let i = 1; i < HEAT_STOPS.length; i++) {
+      const [t0, c0] = HEAT_STOPS[i - 1]!;
+      const [t1, c1] = HEAT_STOPS[i]!;
+      if (t > t1) continue;
+      const f = (t - t0) / (t1 - t0);
+      rgb = [0, 1, 2].map((j) => Math.round(c0[j]! + (c1[j]! - c0[j]!) * f)) as [number, number, number];
+      break;
+    }
   }
-  return { min, max };
+  return `rgb(${rgb.join(",")})`;
+}
+
+// Rounded integer in the given unit, no symbol: "18" / "64".
+export function formatTemp(tempC: number, unit: Unit): string {
+  const c = finite(tempC);
+  return String(Math.round(unit === "F" ? (c * 9) / 5 + 32 : c) || 0);
 }

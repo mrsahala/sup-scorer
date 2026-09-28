@@ -1,6 +1,6 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import { skyKind, skyWord, rainTotal, tempRange } from "./sky";
+import { skyKind, skyWord, rainTotal, heatColor, formatTemp } from "./sky";
 import { scoreHour, type ScoredHour } from "./scoring";
 import type { HourRow } from "./weather";
 
@@ -65,29 +65,40 @@ describe("skyWord", () => {
   test("an empty day is sunny, not NaN-driven", () => assert.equal(skyWord([]), "sunny"));
 });
 
-describe("tempRange", () => {
-  test("floors and ceils, then pads 2 each side", () => {
-    assert.deepEqual(tempRange([[hour({ tempC: 4.6 })], [hour({ tempC: 20.2 })]]), { min: 2, max: 23 });
+describe("heatColor", () => {
+  const stops: [number, string][] = [
+    [5, "rgb(74,127,214)"],
+    [12, "rgb(90,167,217)"],
+    [17, "rgb(159,199,106)"],
+    [22, "rgb(240,192,75)"],
+    [27, "rgb(240,138,60)"],
+    [32, "rgb(224,85,58)"],
+  ];
+  for (const [c, want] of stops) test(`${c} °C is exactly its stop`, () => assert.equal(heatColor(c), want));
+
+  test("interpolates linearly between stops", () => assert.equal(heatColor(19.5), "rgb(200,196,91)"));
+
+  test("clamps below and above the range", () => {
+    assert.equal(heatColor(-10), "rgb(74,127,214)");
+    assert.equal(heatColor(45), "rgb(224,85,58)");
   });
 
-  test("a narrow forecast widens symmetrically to 12 degrees", () => {
-    // 15..18 -> 13..20 (span 7) -> widened by 2.5 each side.
-    assert.deepEqual(tempRange([[hour({ tempC: 15 }), hour({ tempC: 18 })]]), { min: 10.5, max: 22.5 });
+  test("a missing temperature doesn't produce NaN", () => assert.doesNotMatch(heatColor(NaN), /NaN/));
+});
+
+describe("formatTemp", () => {
+  test("rounds Celsius to an integer", () => {
+    assert.equal(formatTemp(17.5, "C"), "18");
+    assert.equal(formatTemp(17.4, "C"), "17");
+    assert.equal(formatTemp(-0.4, "C"), "0");
   });
 
-  test("exactly 12 after padding is left alone", () => {
-    assert.deepEqual(tempRange([[hour({ tempC: 10 }), hour({ tempC: 18 })]]), { min: 8, max: 20 });
+  test("converts to Fahrenheit, then rounds", () => {
+    assert.equal(formatTemp(18, "F"), "64");
+    assert.equal(formatTemp(0, "F"), "32");
+    assert.equal(formatTemp(-40, "F"), "-40");
+    assert.equal(formatTemp(17.5, "F"), "64");
   });
 
-  test("night hours are ignored", () => {
-    assert.deepEqual(tempRange([[hour({ tempC: 10 }), hour({ tempC: 30 }), hour({ tempC: -20, isDaylight: false })]]), {
-      min: 8,
-      max: 32,
-    });
-  });
-
-  test("no usable hours gives a finite fallback", () => {
-    const r = tempRange([[], [hour({ tempC: NaN })]]);
-    assert.ok(Number.isFinite(r.min) && Number.isFinite(r.max) && r.max - r.min >= 12);
-  });
+  test("a missing temperature is 0, not NaN", () => assert.equal(formatTemp(NaN, "F"), "32"));
 });

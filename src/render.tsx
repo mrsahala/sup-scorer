@@ -22,7 +22,8 @@ import {
   type Locale,
 } from "./i18n";
 import type { ScoredHour } from "./scoring";
-import { DayCard, defaultSel, interpolate } from "./ribbon";
+import { DayCard, defaultSel, interpolate, unitSymbol } from "./ribbon";
+import type { Unit } from "./sky";
 import { daySummary, groupByDate, type GoodWindow } from "./windows";
 import type { SdSpot } from "./cookies";
 import { LOCATION, type Tier } from "./config";
@@ -262,6 +263,40 @@ function MapPanel({ locale }: { locale: Locale }): JSX.Element {
   );
 }
 
+const UNITS: Unit[] = ["C", "F"];
+
+// The current page with ?unit= set; index.ts stores the choice in sd_unit.
+function unitUrl(locale: Locale, currentPath: string, search: string, unit: Unit): string {
+  const params = new URLSearchParams(search);
+  params.set("unit", unit);
+  return `/${locale}${currentPath === "/" ? "/" : currentPath}?${params}`;
+}
+
+function UnitsRow({
+  locale,
+  unit,
+  currentPath,
+  search,
+}: {
+  locale: Locale;
+  unit: Unit;
+  currentPath: string;
+  search: string;
+}): JSX.Element {
+  return (
+    <>
+      <div class="list-h">{t(locale, "unitsHeading")}</div>
+      <div class="units">
+        {UNITS.map((u) => (
+          <a key={u} class={u === unit ? "unit on" : "unit"} href={unitUrl(locale, currentPath, search, u)}>
+            {unitSymbol(u)}
+          </a>
+        ))}
+      </div>
+    </>
+  );
+}
+
 function TitleBlock({
   locale,
   spot,
@@ -271,6 +306,9 @@ function TitleBlock({
   mapOpen,
   days,
   todayDate,
+  unit,
+  currentPath,
+  search,
 }: {
   locale: Locale;
   spot: PageSpot;
@@ -280,6 +318,9 @@ function TitleBlock({
   mapOpen: boolean;
   days: DayView[];
   todayDate: string;
+  unit: Unit;
+  currentPath: string;
+  search: string;
 }): JSX.Element {
   return (
     <section
@@ -343,6 +384,7 @@ function TitleBlock({
                 </a>
               ))}
             </div>
+            <UnitsRow locale={locale} unit={unit} currentPath={currentPath} search={search} />
           </div>
         </div>
       </div>
@@ -377,9 +419,10 @@ function Chips({ locale, spot, savedSpots }: { locale: Locale; spot: PageSpot; s
 // same numbers and copy the server rendered with. JSON in a
 // <script type="application/json"> only has to escape "<" to be inert; JSX's
 // own escaping would turn the quotes into entities and corrupt it.
-function pageDataJson(locale: Locale, spot: PageSpot, saved: boolean, days: DayView[]): string {
+function pageDataJson(locale: Locale, spot: PageSpot, saved: boolean, days: DayView[], unit: Unit): string {
   const data = {
     locale,
+    unit,
     spot: { name: spot.name, lat: spot.lat, lon: spot.lon, gps: spot.gps, saved },
     days: days.map((d) => ({
       date: d.date,
@@ -517,6 +560,7 @@ export function renderConditionsPage({
   savedSpots = [],
   now = new Date(),
   timezone = LOCATION.timezone,
+  unit = "C",
 }: {
   locale: Locale;
   spot: PageSpot;
@@ -533,6 +577,7 @@ export function renderConditionsPage({
   mapOpen?: boolean;
   savedSpots?: SdSpot[];
   now?: Date;
+  unit?: Unit;
 }): string {
   const clock = localNow(now, timezone);
   const days = buildDays(scoredHours, clock.date, clock.hour);
@@ -546,7 +591,7 @@ export function renderConditionsPage({
         locale={locale}
         currentPath={currentPath}
         search={search}
-        pageData={pageDataJson(locale, spot, saved, days)}
+        pageData={pageDataJson(locale, spot, saved, days, unit)}
       >
         <TitleBlock
           locale={locale}
@@ -557,6 +602,9 @@ export function renderConditionsPage({
           mapOpen={mapOpen}
           days={days}
           todayDate={clock.date}
+          unit={unit}
+          currentPath={currentPath}
+          search={search}
         />
         <Chips locale={locale} spot={spot} savedSpots={savedSpots} />
         <div class="days" id="days">
@@ -571,6 +619,7 @@ export function renderConditionsPage({
                 sel={d.sel}
                 nowIndex={d.nowIndex}
                 nowFraction={clock.minute / 60}
+                unit={unit}
               />
             ))
           ) : (

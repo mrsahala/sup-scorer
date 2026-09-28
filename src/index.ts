@@ -14,7 +14,24 @@ import { renderConditionsPage, renderAttributionPage } from "./render";
 import { searchLocation, reverseGeocode } from "./geocode";
 import { t, parseLocalizedPath, weekdayShort, DEFAULT_LOCALE, LOCALES, type Locale } from "./i18n";
 import { groupByDate, glance } from "./windows";
-import { parseSdLast, parseSdSpots, serializeSdLast, isLocalhost } from "./cookies";
+import { parseSdLast, parseSdSpots, parseSdUnit, serializeSdLast, serializeSdUnit, isLocalhost } from "./cookies";
+import type { Unit } from "./sky";
+
+// Countries that use Fahrenheit day to day; everywhere else defaults to Celsius.
+const FAHRENHEIT_COUNTRIES = new Set(["US", "LR", "MM"]);
+
+const unitParam = (url: URL): Unit | null => {
+  const v = url.searchParams.get("unit");
+  return v === "C" || v === "F" ? v : null;
+};
+
+// ?unit= -> sd_unit cookie -> the visitor's country -> Celsius.
+function resolveUnit(url: URL, cookieHeader: string | null, request: Request): Unit {
+  const country = viewerCountryFrom(request);
+  return (
+    unitParam(url) ?? parseSdUnit(cookieHeader) ?? (country && FAHRENHEIT_COUNTRIES.has(country) ? "F" : "C")
+  );
+}
 
 // The Worker's bindings, matching wrangler.jsonc's `assets` block. ASSETS
 // is what serves everything under public/ (see fetch()'s fallback below).
@@ -93,6 +110,7 @@ async function handleAppRoute(
   const cookieHeader = request.headers.get("Cookie");
   const savedSpots = parseSdSpots(cookieHeader);
   const geo = { locale, viewerCountry: viewerCountryFrom(request) };
+  const unit = resolveUnit(url, cookieHeader, request);
 
   if (path === "/") {
     const spot = resolveStartingSpot(cookieHeader, ipLocation);
@@ -111,6 +129,7 @@ async function handleAppRoute(
         search,
         switcherOpen: spot.switcherOpen,
         savedSpots,
+        unit,
       })
     );
   }
@@ -144,6 +163,7 @@ async function handleAppRoute(
         // persisted gps-derived spot happens to be reloaded later.
         mapOpen: gps,
         savedSpots,
+        unit,
       })
     );
     // Remember the spot only for visitors who have starred one: that press is
@@ -283,7 +303,13 @@ export default {
 
     const parsed = parseLocalizedPath(path);
     if (parsed) {
-      return handleAppRoute(parsed.locale, parsed.path, url, request, ipLocationFrom(request));
+      const response = await handleAppRoute(parsed.locale, parsed.path, url, request, ipLocationFrom(request));
+      // Picking a unit in the switcher is the explicit choice that sets the preference.
+      const picked = unitParam(url);
+      if (picked && response.ok) {
+        response.headers.append("Set-Cookie", serializeSdUnit(picked, { secure: !isLocalhost(url) }));
+      }
+      return response;
     }
 
     return env.ASSETS.fetch(request);

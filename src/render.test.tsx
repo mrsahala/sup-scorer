@@ -193,6 +193,45 @@ describe("meta line sky", () => {
   });
 });
 
+describe("temperature unit", () => {
+  const scoredHours = [scoreHour(row(TODAY, 10, 13, { tempC: 6, cloudPct: 50 }))];
+
+  test("unit F shows Fahrenheit everywhere and no Celsius", () => {
+    const html = renderConditionsPage({ ...baseArgs, scoredHours, unit: "F" });
+    const body = html.slice(0, html.indexOf('<script type="application/json"'));
+    assert.ok(body.includes('<span class="mono">43–43</span>°F'));
+    assert.ok(body.includes('<span class="mono">43°F</span>'));
+    assert.ok(!body.replace(">°C</a>", "").includes("°C"));
+    assert.equal(JSON.parse(pageData(html)).unit, "F");
+  });
+
+  test("the units row links to this page with each unit, marking the current one", () => {
+    const html = renderConditionsPage({
+      ...baseArgs,
+      scoredHours,
+      currentPath: "/conditions",
+      search: "?lat=52.2&lon=5.08&name=Loosdrecht",
+      unit: "F",
+    });
+    assert.ok(html.includes('<div class="list-h">Units</div><div class="units">'));
+    assert.ok(html.includes('<a class="unit" href="/en/conditions?lat=52.2&amp;lon=5.08&amp;name=Loosdrecht&amp;unit=C">°C</a>'));
+    assert.ok(html.includes('<a class="unit on" href="/en/conditions?lat=52.2&amp;lon=5.08&amp;name=Loosdrecht&amp;unit=F">°F</a>'));
+  });
+
+  test("on the home page the links are /{locale}/?unit=, replacing any unit already set", () => {
+    const html = renderConditionsPage({ ...baseArgs, locale: "de", scoredHours, search: "?unit=F" });
+    assert.ok(html.includes('<a class="unit on" href="/de/?unit=C">°C</a>'));
+    assert.ok(html.includes('href="/de/?unit=F"'));
+    assert.ok(html.includes('<div class="list-h">Einheiten</div>'));
+  });
+
+  test("Celsius is the default", () => {
+    const html = renderConditionsPage({ ...baseArgs, scoredHours });
+    assert.equal(JSON.parse(pageData(html)).unit, "C");
+    assert.ok(html.includes('<a class="unit on" href="/en/?unit=C">°C</a>'));
+  });
+});
+
 describe("#page-data", () => {
   const scoredHours = day(TODAY, [23, 13, 13]);
 
