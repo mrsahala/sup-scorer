@@ -10,7 +10,7 @@ import { t, compassLabel, dateLocale, dayLabel, type Locale } from "./i18n";
 import type { ScoredHour } from "./scoring";
 import { daySummary, findWindows, type DaySummary } from "./windows";
 import type { Tier } from "./config";
-import { formatTemp, rainTotal, skyWord, type SkyWord, type Unit } from "./sky";
+import { formatTemp, heatColor, rainTotal, skyKind, skyWord, type SkyKind, type SkyWord, type Unit } from "./sky";
 
 const Y_MAX = 40; // km/h; the same vertical scale on every day, so shapes compare
 const VB_W = 1000;
@@ -210,6 +210,107 @@ function ArrowIcon({ cls, rot }: { cls?: string; rot?: number }): JSX.Element {
 
 // today -> the current hour, or 0 once it's past daylight; any other day -> the
 // start of its best window.
+const RAIN_BAR_MM = 0.05;
+const MAYBE_RAIN_PCT = 40;
+const RAIN_SCALE_MM = 4; // the bar is full height from here up
+const SUN_RAYS = [0, 45, 90, 135, 180, 225, 270, 315];
+
+function Sun({ x = 0, y = 0, k = 1 }: { x?: number; y?: number; k?: number }): JSX.Element {
+  return (
+    <g transform={`translate(${x} ${y}) scale(${k})`}>
+      <circle class="g-sun" r="3" />
+      {SUN_RAYS.map((a) => (
+        <line key={a} class="g-ray" x1="0" y1="-4.6" x2="0" y2="-6" transform={`rotate(${a})`} />
+      ))}
+    </g>
+  );
+}
+
+function Cloud({ x, y, k, dark }: { x: number; y: number; k: number; dark: boolean }): JSX.Element {
+  return (
+    <g class={dark ? "g-cloud dark" : "g-cloud"} transform={`translate(${x} ${y}) scale(${k})`}>
+      <circle cx="-2.2" cy="1" r="2.8" />
+      <circle cx="1.8" cy="-0.2" r="3.3" />
+      <rect x="-4.6" y="1" width="9.4" height="3" rx="1.5" />
+    </g>
+  );
+}
+
+function Glyph({ children }: { children: ComponentChildren }): JSX.Element {
+  return (
+    <svg class="g" viewBox="-8 -8 16 16">
+      {children}
+    </svg>
+  );
+}
+
+export function SunIcon(): JSX.Element {
+  return (
+    <Glyph>
+      <Sun />
+    </Glyph>
+  );
+}
+
+export function PartlyIcon(): JSX.Element {
+  return (
+    <Glyph>
+      <Sun x={-2.4} y={-2.4} k={0.75} />
+      <Cloud x={1.2} y={1.4} k={0.95} dark={false} />
+    </Glyph>
+  );
+}
+
+export function CloudIcon(): JSX.Element {
+  return (
+    <Glyph>
+      <Cloud x={0} y={0} k={1.1} dark />
+    </Glyph>
+  );
+}
+
+export function RainIcon(): JSX.Element {
+  return (
+    <Glyph>
+      <Cloud x={0} y={-2} k={1} dark />
+      <line class="g-drop" x1="-2.5" y1="3.2" x2="-3.2" y2="6" />
+      <line class="g-drop" x1="0.5" y1="3.2" x2="-0.2" y2="6" />
+      <line class="g-drop" x1="3.5" y1="3.2" x2="2.8" y2="6" />
+    </Glyph>
+  );
+}
+
+const SKY_ICON: Record<SkyKind, () => JSX.Element> = {
+  sun: SunIcon,
+  partly: PartlyIcon,
+  cloud: CloudIcon,
+  rain: RainIcon,
+};
+
+// One cell per hour: tinted by temperature, sky glyph, temperature, rain bar or likely-rain line.
+function ConditionsRow({ hours, sel, unit }: { hours: ScoredHour[]; sel: number; unit: Unit }): JSX.Element {
+  return (
+    <div class="cond" aria-hidden="true">
+      {hours.map((h, i) => {
+        const kind = skyKind(h);
+        const Icon = SKY_ICON[kind];
+        const mm = finite(h.rainMm);
+        return (
+          <span key={h.time} class={i === sel ? `cell sky-${kind} on` : `cell sky-${kind}`} style={`--heat:${heatColor(h.tempC)}`}>
+            <Icon />
+            <b>{`${formatTemp(h.tempC, unit)}°`}</b>
+            {mm > RAIN_BAR_MM ? (
+              <i class="rain" style={`--mm:${r2(Math.min(mm, RAIN_SCALE_MM) / RAIN_SCALE_MM)}`} />
+            ) : finite(h.rainPct) >= MAYBE_RAIN_PCT ? (
+              <i class="rain maybe" />
+            ) : null}
+          </span>
+        );
+      })}
+    </div>
+  );
+}
+
 export function defaultSel(hours: ScoredHour[], nowIndex: number, isToday = false): number {
   if (nowIndex >= 0 && nowIndex < hours.length) return nowIndex;
   if (isToday) return 0;
@@ -291,6 +392,7 @@ export function Ribbon({
       data-now={showNow ? String(r2(nowAt)) : undefined}
       style={`--n:${n}`}
     >
+      <ConditionsRow hours={hours} sel={selIdx} unit={unit} />
       <div class="strip">{segs}</div>
       <div class="chart">
         <svg class="curves" viewBox={`0 0 ${VB_W} ${VB_H}`} preserveAspectRatio="none" aria-hidden="true">

@@ -225,6 +225,11 @@ describe("temperature unit", () => {
     assert.ok(html.includes('<div class="list-h">Einheiten</div>'));
   });
 
+  test("the conditions row follows the page's unit", () => {
+    const html = renderConditionsPage({ ...baseArgs, scoredHours, unit: "F" });
+    assert.ok(html.includes("<b>43°</b>"));
+  });
+
   test("Celsius is the default", () => {
     const html = renderConditionsPage({ ...baseArgs, scoredHours });
     assert.equal(JSON.parse(pageData(html)).unit, "C");
