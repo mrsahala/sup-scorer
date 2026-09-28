@@ -18,6 +18,9 @@ function fixture() {
       windgusts_10m: [10, 11, 20, 15, 12],
       winddirection_10m: [200, 210, 225, 240, 250],
       weathercode: [3, 1, 0, 61, 2],
+      cloudcover: [100, 80, 40, null, 0] as (number | null)[],
+      precipitation: [0, 0, 1.3, null, 0] as (number | null)[],
+      precipitation_probability: [5, 10, 85, null, 0] as (number | null)[],
     },
     daily: {
       time: ["2026-08-27"],
@@ -54,6 +57,9 @@ describe("fetchForecast", () => {
     assert.equal(hours[2]!.gustKmh, 20);
     assert.equal(hours[2]!.windDirDeg, 225);
     assert.equal(hours[2]!.weatherCode, 0);
+    assert.equal(hours[2]!.cloudPct, 40);
+    assert.equal(hours[2]!.rainMm, 1.3);
+    assert.equal(hours[2]!.rainPct, 85);
     assert.equal(hours[2]!.sunrise, "06:00");
     assert.equal(hours[2]!.sunset, "20:00");
 
@@ -72,7 +78,7 @@ describe("fetchForecast", () => {
     assert.equal(url.searchParams.get("longitude"), "4.9");
     assert.equal(
       url.searchParams.get("hourly"),
-      "temperature_2m,windspeed_10m,windgusts_10m,winddirection_10m,weathercode"
+      "temperature_2m,windspeed_10m,windgusts_10m,winddirection_10m,weathercode,cloudcover,precipitation,precipitation_probability"
     );
     assert.equal(url.searchParams.get("daily"), "sunrise,sunset");
     assert.equal(url.searchParams.get("timezone"), "Europe/Amsterdam");
@@ -168,5 +174,27 @@ describe("fetchForecast", () => {
     const { hours } = await fetchForecast();
     const extra = hours.find((h) => h.date === "2026-08-28");
     assert.equal(extra?.isDaylight, false);
+  });
+
+  test("null cloud and rain values map to 0", async (t) => {
+    mockFetch(t, [
+      { match: (url) => url.includes("api.open-meteo.com"), respond: () => ({ status: 200, json: fixture() }) },
+    ]);
+
+    const { hours } = await fetchForecast();
+    assert.deepEqual([hours[3]!.cloudPct, hours[3]!.rainMm, hours[3]!.rainPct], [0, 0, 0]);
+  });
+
+  test("missing cloud and rain arrays map to 0", async (t) => {
+    const { cloudcover, precipitation, precipitation_probability, ...hourly } = fixture().hourly;
+    mockFetch(t, [
+      {
+        match: (url) => url.includes("api.open-meteo.com"),
+        respond: () => ({ status: 200, json: { ...fixture(), hourly } }),
+      },
+    ]);
+
+    const { hours } = await fetchForecast();
+    for (const h of hours) assert.deepEqual([h.cloudPct, h.rainMm, h.rainPct], [0, 0, 0]);
   });
 });

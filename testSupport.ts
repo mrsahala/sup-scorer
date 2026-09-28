@@ -70,6 +70,9 @@ export function openMeteoFixture() {
       windgusts_10m: [12, 12, 12],
       winddirection_10m: [220, 220, 220],
       weathercode: [0, 0, 0],
+      cloudcover: [10, 50, 90],
+      precipitation: [0, 0, 0.4],
+      precipitation_probability: [0, 20, 70],
     },
     daily: {
       time: ["2026-08-27"],
@@ -102,6 +105,9 @@ export function threeDayWindowsFixture() {
   const windgusts_10m: number[] = [];
   const winddirection_10m: number[] = [];
   const weathercode: number[] = [];
+  const cloudcover: number[] = [];
+  const precipitation: number[] = [];
+  const precipitation_probability: number[] = [];
   for (const [date, winds] of days) {
     winds.forEach((wind, i) => {
       const hh = String(6 + i).padStart(2, "0");
@@ -111,10 +117,23 @@ export function threeDayWindowsFixture() {
       windgusts_10m.push(wind); // equal to wind - no gust downgrade in this fixture
       winddirection_10m.push(200);
       weathercode.push(0);
+      cloudcover.push(20);
+      precipitation.push(0);
+      precipitation_probability.push(0);
     });
   }
   return {
-    hourly: { time, temperature_2m, windspeed_10m, windgusts_10m, winddirection_10m, weathercode },
+    hourly: {
+      time,
+      temperature_2m,
+      windspeed_10m,
+      windgusts_10m,
+      winddirection_10m,
+      weathercode,
+      cloudcover,
+      precipitation,
+      precipitation_probability,
+    },
     daily: {
       time: days.map(([date]) => date),
       sunrise: days.map(([date]) => `${date}T06:00`),
